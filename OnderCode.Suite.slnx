@@ -10,6 +10,8 @@
     <Project Path="src/Shared/OnderCode.Kernel/OnderCode.Kernel.csproj" />
     <Project Path="src/Shared/OnderCode.Data/OnderCode.Data.csproj" />
     <Project Path="src/Shared/OnderCode.Application/OnderCode.Application.csproj" />
+    <Project Path="src/Shared/OnderCode.Analytics/OnderCode.Analytics.csproj" />
+    <Project Path="src/Shared/OnderCode.Reporting/OnderCode.Reporting.csproj" />
   </Folder>
   <Folder Name="/src/Apps/" />
   <Folder Name="/src/Apps/Otel/">
@@ -21,6 +23,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/OnderCode.Data.Tests/OnderCode.Data.Tests.csproj" />
     <Project Path="tests/OnderCode.Application.Tests/OnderCode.Application.Tests.csproj" />
+    <Project Path="tests/OnderCode.Reporting.Tests/OnderCode.Reporting.Tests.csproj" />
     <Project Path="tests/Otel.Tests/Otel.Tests.csproj" />
   </Folder>
 </Solution>

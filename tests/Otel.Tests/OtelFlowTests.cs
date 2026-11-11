@@ -133,6 +133,60 @@ public sealed class OtelFlowTests : IAsyncLifetime
         Assert.True(guests.Items[0].LoyaltyPoints >= guests.Items[^1].LoyaltyPoints);
     }
 
+    [Fact]
+    public async Task Revenue_Report_Is_Consistent_With_Kpis()
+    {
+        var result = await Sender.SendAsync(new GetRevenueReport(Today.AddDays(-30), Today.AddDays(-1)));
+        Assert.True(result.IsSuccess, result.ErrorMessage);
+        var r = result.Value;
+
+        Assert.Equal(30, r.Days.Count);
+        Assert.Equal(26 * 30, r.Current.AvailableNights);
+        Assert.Equal(r.Current.SoldNights, r.Days.Sum(d => d.SoldRooms));
+        // günlük ve oda tipi tutarları ayrı ayrı kuruşa yuvarlanır; toplam fark birkaç kuruşu geçmez
+        Assert.InRange(Math.Abs(r.Current.RoomRevenue - r.Days.Sum(d => d.RoomRevenue)), 0m, 1m);
+        Assert.InRange(Math.Abs(r.Current.RoomRevenue - r.RoomTypes.Sum(t => t.Revenue)), 0m, 1m);
+        Assert.Equal(1.0, r.RoomTypes.Sum(t => t.Share), 3);
+        Assert.True(r.ExtraRevenue > 0);
+        Assert.Equal(r.ExtraRevenue, r.Charges.Sum(c => c.Amount));
+        Assert.True(r.Previous.SoldNights > 0);
+
+        var invalid = await Sender.SendAsync(new GetRevenueReport(Today, Today.AddDays(-1)));
+        Assert.True(invalid.IsFailure);
+    }
+
+    [Fact]
+    public async Task Guest_Pareto_Classifies_Guests()
+    {
+        var r = (await Sender.SendAsync(new GetGuestPareto(Today.AddDays(-75), Today))).Value;
+
+        Assert.True(r.GuestCount > 20);
+        Assert.Equal(r.GuestCount, r.CountA + r.CountB + r.CountC);
+        Assert.Equal(r.Total, r.Guests.Sum(g => g.Total));
+        Assert.Equal(1.0, r.Guests[^1].Cumulative, 6);
+        Assert.InRange(r.ValueShareA, 0.79, 0.95);
+        Assert.True(r.CountShareA < 0.8);
+        Assert.True(r.Guests.Zip(r.Guests.Skip(1)).All(p => p.First.Total >= p.Second.Total));
+    }
+
+    [Fact]
+    public async Task Occupancy_Forecast_Respects_Bounds_And_Bookings()
+    {
+        var r = (await Sender.SendAsync(new GetOccupancyForecast(Horizon: 14, HistoryDays: 56))).Value;
+
+        Assert.Equal(14, r.Days.Count);
+        Assert.Equal(56, r.HistoryActual.Length);
+        Assert.Equal(Today, r.Days[0].Date);
+        Assert.All(r.Days, d =>
+        {
+            Assert.InRange(d.Forecast, 0, 1);
+            Assert.True(d.Expected >= d.OnTheBooks);
+            Assert.True(d.Lower <= d.Forecast && d.Forecast <= d.Upper);
+        });
+        Assert.InRange(r.HistoryAverage, 0.4, 0.98);
+        Assert.False(string.IsNullOrEmpty(r.Method));
+    }
+
     private sealed class FixedTime(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;

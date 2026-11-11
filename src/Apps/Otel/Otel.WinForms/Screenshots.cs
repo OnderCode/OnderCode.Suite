@@ -1,4 +1,5 @@
 using System.Drawing.Imaging;
+using OnderCode.Reporting.Export;
 using Otel.Application;
 using Otel.Domain;
 using Otel.WinForms.Pages;
@@ -28,6 +29,19 @@ static class Screenshots
             await Snap(shell, dir, "04-rezervasyonlar", shell.ShowPage("res"));
             await Snap(shell, dir, "05-misafirler", shell.ShowPage("guests"));
             await Snap(shell, dir, "06-kat-hizmetleri", shell.ShowPage("hk"));
+
+            // Raporlar: ekran görüntüsü + README'de bağlantı verilen örnek dosyalar
+            var reports = (ReportsPage)shell.ShowPage("reports");
+            var samples = Path.Combine(dir, "ornek-raporlar");
+            await reports.ShowAsync(ReportsPage.Kind.Revenue);
+            await Snap(shell, dir, "11-rapor-gelir", null);
+            reports.SaveAll(samples, "gelir-ve-doluluk", ReportExporters.Pdf, ReportExporters.Excel, ReportExporters.Csv);
+            await reports.ShowAsync(ReportsPage.Kind.GuestValue);
+            await Snap(shell, dir, "12-rapor-abc", null);
+            reports.SaveAll(samples, "misafir-degeri-abc", ReportExporters.Pdf, ReportExporters.Excel);
+            await reports.ShowAsync(ReportsPage.Kind.Forecast);
+            await Snap(shell, dir, "13-rapor-tahmin", null);
+            reports.SaveAll(samples, "doluluk-tahmini", ReportExporters.Pdf, ReportExporters.Excel);
 
             using (var form = new ReservationForm(checkIn: App.Today.AddDays(35)) { StartPosition = FormStartPosition.Manual, Location = new Point(60, 60) })
             {

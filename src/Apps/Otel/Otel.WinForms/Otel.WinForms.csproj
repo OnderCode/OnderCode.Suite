@@ -17,6 +17,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Otel.Infrastructure\Otel.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\Shared\OnderCode.Reporting\OnderCode.Reporting.csproj" />
     <ProjectReference Include="$(OndaProject)" />
   </ItemGroup>
 </Project>

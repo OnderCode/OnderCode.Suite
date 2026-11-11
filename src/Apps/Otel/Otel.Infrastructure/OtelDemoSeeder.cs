@@ -86,9 +86,19 @@ public sealed class OtelDemoSeeder(TimeProvider time) : ISeeder<OtelDbContext>
                 // Geleceğe doğru doluluk azalır (rezervasyonlar henüz gelmedi)
                 var ahead = d.DayNumber - today.DayNumber;
                 var fillChance = ahead <= 0 ? 0.80 : ahead < 14 ? 0.62 : 0.38;
+                // Haftalık talep deseni: perşembe-cumartesi girişler daha sık, pazar-pazartesi daha seyrek
+                fillChance += d.DayOfWeek switch
+                {
+                    DayOfWeek.Thursday => 0.08,
+                    DayOfWeek.Friday or DayOfWeek.Saturday => 0.15,
+                    DayOfWeek.Sunday => -0.45,
+                    DayOfWeek.Monday => -0.35,
+                    _ => 0,
+                };
                 if (rnd.NextDouble() > fillChance) { d = d.AddDays(rnd.Next(1, 3)); continue; }
 
                 var nights = rnd.Next(1, 100) switch { < 30 => 1, < 55 => 2, < 75 => 3, < 88 => 4, < 95 => 5, _ => 7 };
+                if (d.DayOfWeek == DayOfWeek.Friday && rnd.NextDouble() < 0.6) nights = 2; // hafta sonu paketi
                 var checkOut = d.AddDays(nights);
                 var guest = guests[rnd.Next(guests.Count)];
                 var bookedOn = d.AddDays(-rnd.Next(1, 75));

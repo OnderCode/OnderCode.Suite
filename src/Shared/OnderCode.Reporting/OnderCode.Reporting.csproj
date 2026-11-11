@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Rapor modeli ve dışa aktarıcılar: Excel (kendi yazıcımız, bağımlılıksız), PDF (PDFsharp, MIT), CSV.
+       Uygulamalar rapor verisini ReportDocument olarak kurar; hangi biçime yazılacağı bu katmanın işidir. -->
+  <PropertyGroup>
+    <RootNamespace>OnderCode.Reporting</RootNamespace>
+    <Description>OnderCode Suite raporlama: tablo, gösterge ve grafikli rapor modeli; XLSX, PDF ve CSV çıktısı.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="PDFsharp" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+</Project>

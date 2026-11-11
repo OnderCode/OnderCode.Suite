@@ -1,10 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Otel kullanım senaryoları: rezervasyon, giriş/çıkış, folyo, kat hizmetleri, gösterge paneli. -->
+  <!-- Otel kullanım senaryoları: rezervasyon, giriş/çıkış, folyo, kat hizmetleri, gösterge paneli, raporlar. -->
   <PropertyGroup>
     <RootNamespace>Otel.Application</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Otel.Domain\Otel.Domain.csproj" />
     <ProjectReference Include="..\..\..\Shared\OnderCode.Application\OnderCode.Application.csproj" />
+    <ProjectReference Include="..\..\..\Shared\OnderCode.Analytics\OnderCode.Analytics.csproj" />
   </ItemGroup>
 </Project>

@@ -4,12 +4,16 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9" />
-    <!-- EF Core 10'un getirdiği eski SQLite yerine 3.53 (CVE-2025-6965 düzeltmesi). Microsoft'un 10.0.x için önerdiği yol. -->
-    <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.12" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.15" />
+    <!-- Yerel SQLite açıkça sabit: CVE-2025-6965 düzeltmesini içeren sürümün altına düşülmesin. -->
+    <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.13" />
     <PackageVersion Include="FluentValidation" Version="12.2.0" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.15" />
+    <!-- PDF: PDFsharp 6.2.4 son MIT sürümü. 6.5.0 ve sonrası AGPL / ticari çift lisanslı; YÜKSELTMEYİN. -->
+    <PackageVersion Include="PDFsharp" Version="6.2.4" />
+    <!-- PDFsharp'ın getirdiği 8.0 yerine güncel 10.0 yaması -->
+    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.15" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.0.2" />

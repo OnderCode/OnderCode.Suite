@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Bağımlılıksız analiz araçları: Pareto (ABC) ve zaman serisi tahminleme.
+       Application katmanları doğrudan kullanır; arayüze ve dosya biçimlerine bağlı değildir. -->
+  <PropertyGroup>
+    <RootNamespace>OnderCode.Analytics</RootNamespace>
+    <Description>OnderCode Suite analiz araçları: Pareto/ABC sınıflandırması, doğrusal trend, Holt ve Holt-Winters tahminleme.</Description>
+  </PropertyGroup>
+</Project>

@@ -31,6 +31,8 @@ sealed class ShellForm : OndaForm
         _menu.Items.Add(new OndaMenuItem("Misafirler", "", "guests"));
         _menu.Items.Add(OndaMenuItem.Header("Operasyon"));
         _menu.Items.Add(new OndaMenuItem("Kat hizmetleri", "", "hk"));
+        _menu.Items.Add(OndaMenuItem.Header("Yönetim"));
+        _menu.Items.Add(new OndaMenuItem("Raporlar", "", "reports"));
         _menu.Items.Add(new OndaMenuItem("Hakkında", "", "about"));
 
         Controls.Add(_host);
@@ -66,6 +68,7 @@ sealed class ShellForm : OndaForm
                 "res" => new ReservationsPage(),
                 "guests" => new GuestsPage(),
                 "hk" => new HousekeepingPage(),
+                "reports" => new ReportsPage(),
                 _ => new DashboardPage(),
             };
             page.Visible = false;

@@ -28,8 +28,11 @@ public sealed class Guest : FullAuditableEntity
     public int LoyaltyPoints { get; private set; }
     public int StayCount { get; private set; }
 
-    public LoyaltyTier Tier => LoyaltyPoints >= GoldThreshold ? LoyaltyTier.Gold
-        : LoyaltyPoints >= SilverThreshold ? LoyaltyTier.Silver
+    public LoyaltyTier Tier => TierOf(LoyaltyPoints);
+
+    /// <summary>Puana göre seviye (sorgu projeksiyonlarında da kullanılır).</summary>
+    public static LoyaltyTier TierOf(int points) => points >= GoldThreshold ? LoyaltyTier.Gold
+        : points >= SilverThreshold ? LoyaltyTier.Silver
         : LoyaltyTier.Standard;
 
     /// <summary>Konaklama tamamlanınca: gece başına puan ve konaklama sayısı.</summary>

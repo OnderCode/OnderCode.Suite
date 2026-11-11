@@ -17,7 +17,8 @@ OnderCode.Suite/
 │  │  │                          denetim, yumuşak silme, Türkçe sıralama/arama, başlatıcı
 │  │  ├─ OnderCode.Application   Komut/sorgu dağıtıcı, davranış hattı (log, hata çevirisi,
 │  │                          FluentValidation), Result türü, alan olayı dağıtıcısı
-│  │  ├─ OnderCode.Reporting     (sırada) Excel / PDF / CSV, Pareto, trend ve tahminleme
+│  │  ├─ OnderCode.Analytics     Bağımlılıksız analiz: Pareto/ABC, doğrusal trend, Holt, Holt-Winters
+│  │  ├─ OnderCode.Reporting     Rapor modeli; Excel (kendi yazıcımız), PDF (PDFsharp), CSV
 │  │  └─ OnderCode.WinForms      (sırada) Onda bileşenleri üzerine uygulama kabuğu, DI, navigasyon
 │  └─ Apps/                      her uygulama 4 katman: Domain · Application · Infrastructure · WinForms
 │     ├─ Otel/                     ✔ hazır
@@ -29,7 +30,8 @@ OnderCode.Suite/
 └─ tests/
    ├─ OnderCode.Data.Tests          Gerçek SQLite dosyası üzerinde veri katmanı testleri
    ├─ OnderCode.Application.Tests   Dağıtıcı + hat + veri katmanı birlikte, uçtan uca
-   └─ Otel.Tests                    Fiyat motoru, çakışma kuralı, KPI hesabı, örnek veriyle uçtan uca akış
+   ├─ OnderCode.Reporting.Tests     Pareto ve tahmin doğruluğu; Excel/PDF/CSV çıktılarının yapısı
+   └─ Otel.Tests                    Fiyat motoru, çakışma kuralı, KPI hesabı, raporlar, örnek veriyle uçtan uca akış
 ```
 
 Bağımlılık yönü tek taraflıdır: `WinForms → Infrastructure → Application → Domain → Kernel`.
@@ -132,6 +134,7 @@ Kurulumsuz çalışan küçük bir otel ön büro uygulaması. İlk açılışta
 | Rezervasyonlar | Türkçe karakter duyarsız arama, duruma göre süzme, ayrıntı ve folyo |
 | Misafirler | Konaklama sayısı, sadakat puanı ve seviyesi (Standart, Gümüş, Altın) |
 | Kat hizmetleri | Çıkışta otomatik açılan temizlik görevleri, atama ve tamamlama |
+| Raporlar | Gelir ve doluluk (önceki dönemle karşılaştırmalı), misafir değeri (Pareto / ABC), 7-30 günlük doluluk tahmini; Excel, PDF ve CSV çıktısı |
 
 İş kuralları Domain katmanında ve testli:
 
@@ -158,12 +161,48 @@ dotnet run --project src/Apps/Otel/Otel.WinForms -c Release
 
 Arayüz [Onda](https://ondercode.com/projeler/onda) bileşenlerini kullanır; Onda deposu bu deponun yanındaki `Onda` klasöründe beklenir (`OndaProject` özelliğiyle değiştirilebilir). Veritabanı `%LocalAppData%\OnderCode\Otel\Otel.db`; silinirse uygulama örnek veriyle yeniden oluşturur. `otel-ekran-goruntuleri.bat` yukarıdaki ekran görüntülerini boş bir veritabanıyla yeniden üretir.
 
+## Raporlama ve analiz
+
+Uygulamalar rapor verisini biçimden bağımsız bir `ReportDocument` olarak kurar: göstergeler, grafikler, tablolar, notlar. Aynı belge üç biçime yazılır.
+
+```csharp
+var doc = new ReportDocument { Title = "Gelir ve Doluluk Raporu", Organization = "Lale Otel" };
+doc.Kpis.Add(new ReportKpi("Doluluk", ReportFormat.Percent(0.784)));
+doc.Tables.Add(ReportTable.For("Günlük döküm", gunler)
+    .Date("Tarih", g => g.Tarih)
+    .Percent("Doluluk", g => g.Doluluk)
+    .Money("Oda geliri", g => g.Gelir, total: true)
+    .Build());
+
+ReportExporters.Save(doc, "rapor.xlsx");   // ya da .pdf / .csv
+```
+
+| Biçim | Nasıl |
+|---|---|
+| Excel | Harici paket yok; Office Open XML doğrudan yazılır. Her tablo ayrı sayfada, başlık satırı dondurulmuş, süzgeç açık. Sayılar, tarihler ve tutarlar gerçek Excel değeri (₺ biçimli); toplam satırı süzgece duyarlı `SUBTOTAL` formülü. |
+| PDF | PDFsharp ile A4 (dikey ya da yatay): gösterge kutuları, çizgi/çubuk grafik, sayfalara bölünen tablolar (başlık her sayfada tekrar eder), "Sayfa x / y". Yazı tipi gömülür; Türkçe karakterler ve ₺ her bilgisayarda aynı görünür. |
+| CSV | Türkçe Excel'in doğrudan açabileceği biçim: noktalı virgül, ondalık virgül, UTF-8. `=`, `+`, `-`, `@` ile başlayan metinler formül olarak çalışmasın diye etkisizleştirilir. |
+
+Analiz araçları (`OnderCode.Analytics`) Application katmanında kullanılır ve hiçbir pakete bağlı değildir:
+
+- **Pareto / ABC:** kalemleri değere göre sıralar, kümülatif payı hesaplar; ilk %80 A, sonraki %15 B, kalan C.
+- **Tahmin:** doğrusal trend, Holt (sönümlü trend) ve toplamsal Holt-Winters (trend + mevsim). Parametreler ızgara aramasıyla bulunur. `Forecast.Auto` serinin son bölümünü ayırıp yöntemleri o bölüm üzerinde yarıştırır ve kazananı kullanır; her tahminle birlikte yaklaşık %80 aralık ve hata ölçüleri (MAE, RMSE, MAPE) döner.
+
+Örnek çıktılar (uygulamanın ürettiği gerçek dosyalar): [gelir ve doluluk PDF](docs/otel/ornek-raporlar/gelir-ve-doluluk.pdf) · [Excel](docs/otel/ornek-raporlar/gelir-ve-doluluk.xlsx) · [CSV](docs/otel/ornek-raporlar/gelir-ve-doluluk.csv) · [misafir değeri PDF](docs/otel/ornek-raporlar/misafir-degeri-abc.pdf) · [doluluk tahmini PDF](docs/otel/ornek-raporlar/doluluk-tahmini.pdf)
+
+<p>
+<img src="docs/otel/11-rapor-gelir.png" width="49%">
+<img src="docs/otel/13-rapor-tahmin.png" width="49%">
+</p>
+
 ## Bilinçli tercihler
 
 - **MediatR ve AutoMapper yok.** İkisi de 2025'te ticari lisansa geçti. Komut/sorgu dağıtıcı küçük ve kendi kodumuz (`OnderCode.Application/Messaging`), eşleme elle ve açık.
 - **FluentValidation var.** Apache 2.0 lisanslı, ücretsiz.
-- **SQLite sürümü sabitlendi.** EF Core 10'un varsayılan olarak getirdiği yerel SQLite'ta yüksek önemli bir açık (CVE-2025-6965) var; `SQLitePCLRaw.bundle_e_sqlite3` 2.1.12 ile SQLite 3.53'e yükseltildi.
-- **QuestPDF yok.** Belirli bir gelirin üstündeki şirketler için ücretli lisans istiyor. PDF için PDFsharp (MIT).
+- **SQLite sürümü sabitlendi.** EF Core 10'un ilk sürümlerinin getirdiği yerel SQLite'ta yüksek önemli bir açık (CVE-2025-6965) vardı; `SQLitePCLRaw.bundle_e_sqlite3` açıkça düzeltmeli sürüme (2.1.13) sabitlendi, daha eskisine düşülmez.
+- **QuestPDF yok.** Belirli bir gelirin üstündeki şirketler için ücretli lisans istiyor. PDF için PDFsharp.
+- **PDFsharp 6.2.4'te sabit.** 6.2.4 MIT lisanslı son sürüm; 6.5.0 ile birlikte PDFsharp AGPL / ticari çift lisansa geçti. Yükseltilmemeli.
+- **Excel için paket yok.** EPPlus ücretli; ClosedXML'in kullandığı SixLabors.Fonts'un yeni sürümleri gelir sınırlı lisanslı. Gereken kadarını yazan küçük bir XLSX yazıcısı daha sade.
 - **Arayüzde Onda.** Standart WinForms kontrolleri yerine [Onda](https://ondercode.com/projeler/onda) bileşenleri.
 - **Generic repository, ama ince.** EF Core zaten bir iş birimi; buradaki katman onu gizlemek için değil, Application katmanını EF'den bağımsız tutmak ve ortak kuralları (Türkçe arama, sayfalama, hata çevirisi) tek yerde toplamak için var. Ağır rapor sorguları Infrastructure'da doğrudan DbContext ile yazılır.
 

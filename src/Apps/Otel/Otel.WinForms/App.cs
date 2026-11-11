@@ -42,10 +42,10 @@ static class App
     /// <summary>Grid rozetleri için metne göre renk.</summary>
     public static Color BadgeColor(object? value) => (value as string) switch
     {
-        "Boş" or "Giriş" or "Tamamlandı" => OndaTheme.Colors.Success,
+        "Boş" or "Giriş" or "Tamamlandı" or "A" => OndaTheme.Colors.Success,
         "Dolu" or "Konaklıyor" => OndaTheme.Colors.Primary,
         "Onaylı" => Violet,
-        "Kirli" or "Çıkış" or "Açık" or "Temizlik" => OndaTheme.Colors.Warning,
+        "Kirli" or "Çıkış" or "Açık" or "Temizlik" or "B" => OndaTheme.Colors.Warning,
         "Bakımda" or "İptal" or "Bakım" => OndaTheme.Colors.Danger,
         "Altın" => Color.FromArgb(217, 119, 6),
         "Gümüş" => Color.FromArgb(100, 116, 139),

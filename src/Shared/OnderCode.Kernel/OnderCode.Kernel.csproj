@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Bağımlılıksız çekirdek: alan modeli tabanları ve kalıcılık sözleşmeleri.
+       EF Core'a referans vermez; Application katmanları yalnızca bunu görür. -->
+  <PropertyGroup>
+    <RootNamespace>OnderCode.Kernel</RootNamespace>
+    <Description>OnderCode Suite çekirdeği: Entity tabanları, Specification, Repository/UnitOfWork sözleşmeleri, Türkçe metin yardımcıları.</Description>
+  </PropertyGroup>
+</Project>

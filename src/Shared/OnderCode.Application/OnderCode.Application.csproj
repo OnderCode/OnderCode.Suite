@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Uygulama katmanı: komut/sorgu dağıtıcı, davranış hattı (log, doğrulama, hata çevirisi), alan olayları.
+       EF Core'a referans vermez; veriye yalnızca Kernel'deki IUnitOfWork / IRepository ile erişir. -->
+  <PropertyGroup>
+    <RootNamespace>OnderCode.Application</RootNamespace>
+    <Description>OnderCode Suite uygulama katmanı: CQRS-lite dağıtıcı, FluentValidation hattı, Result türü, alan olayı dağıtıcısı.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\OnderCode.Kernel\OnderCode.Kernel.csproj" />
+  </ItemGroup>
+</Project>

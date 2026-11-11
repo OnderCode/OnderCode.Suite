@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- EF Core + SQLite veri katmanı. Kurulum gerektirmez: veritabanı dosyası ilk açılışta oluşur. -->
+  <PropertyGroup>
+    <RootNamespace>OnderCode.Data</RootNamespace>
+    <Description>OnderCode Suite veri katmanı: SuiteDbContext, Repository, UnitOfWork, Türkçe sıralama/arama, denetim ve yumuşak silme.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\OnderCode.Kernel\OnderCode.Kernel.csproj" />
+  </ItemGroup>
+</Project>

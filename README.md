@@ -19,16 +19,17 @@ OnderCode.Suite/
 │  │                          FluentValidation), Result türü, alan olayı dağıtıcısı
 │  │  ├─ OnderCode.Reporting     (sırada) Excel / PDF / CSV, Pareto, trend ve tahminleme
 │  │  └─ OnderCode.WinForms      (sırada) Onda bileşenleri üzerine uygulama kabuğu, DI, navigasyon
-│  └─ Apps/                      (sırada) her uygulama 4 katman:
-│     ├─ Otel/                     Otel.Domain · Otel.Application · Otel.Infrastructure · Otel.WinForms
-│     ├─ Otopark/
+│  └─ Apps/                      her uygulama 4 katman: Domain · Application · Infrastructure · WinForms
+│     ├─ Otel/                     ✔ hazır
+│     ├─ Otopark/                  (sırada)
 │     ├─ Eczane/
 │     ├─ SiteYonetimi/
 │     ├─ Lojistik/
 │     └─ Personel/
 └─ tests/
    ├─ OnderCode.Data.Tests          Gerçek SQLite dosyası üzerinde veri katmanı testleri
-   └─ OnderCode.Application.Tests   Dağıtıcı + hat + veri katmanı birlikte, uçtan uca
+   ├─ OnderCode.Application.Tests   Dağıtıcı + hat + veri katmanı birlikte, uçtan uca
+   └─ Otel.Tests                    Fiyat motoru, çakışma kuralı, KPI hesabı, örnek veriyle uçtan uca akış
 ```
 
 Bağımlılık yönü tek taraflıdır: `WinForms → Infrastructure → Application → Domain → Kernel`.
@@ -118,6 +119,44 @@ var oda = await uow.Repository<Oda>().GetRequiredAsync(id);
 oda.TemizlikTamamlandi();
 await uow.SaveChangesAsync();   // denetim, sürüm, olaylar kendiliğinden
 ```
+
+## Otel Otomasyonu
+
+Kurulumsuz çalışan küçük bir otel ön büro uygulaması. İlk açılışta "Lale Otel" örnek verisiyle (26 oda, 140 kurgusal misafir, 4 aylık rezervasyon geçmişi ve geleceği) dolu gelir. Örnek verideki bütün isimler uydurmadır; kimlik ve telefon bilgisi yoktur.
+
+| Ekran | Ne yapar |
+|---|---|
+| Gösterge paneli | Son 30 gün doluluk, ADR, RevPAR ve oda geliri; önceki 30 günle karşılaştırma, günlük doluluk trendi, oda tipine göre gelir, bugünkü giriş/çıkışlar |
+| Oda haritası | Katlara göre odalar, anlık durum (boş, dolu, kirli, bakımda). Odaya tıklayınca alt çubukta bilgi ve işlem: giriş, çıkış, folyo, rezervasyon, temizlendi, bakıma al |
+| Rezervasyon çizelgesi | Oda × gün zaman çizelgesi; boş hücreye tıklayınca o oda ve tarih için yeni rezervasyon |
+| Rezervasyonlar | Türkçe karakter duyarsız arama, duruma göre süzme, ayrıntı ve folyo |
+| Misafirler | Konaklama sayısı, sadakat puanı ve seviyesi (Standart, Gümüş, Altın) |
+| Kat hizmetleri | Çıkışta otomatik açılan temizlik görevleri, atama ve tamamlama |
+
+İş kuralları Domain katmanında ve testli:
+
+- **Fiyat motoru:** oda tipinin taban fiyatı × sezon katsayısı (çakışan sezonlarda en yüksek olan) × hafta sonu katsayısı (cuma ve cumartesi geceleri), 30 gün önceden yapılan rezervasyona erken rezervasyon indirimi. Her gece ayrı fiyatlanır.
+- **Çakışma kuralı:** aynı odaya kesişen tarihlerde ikinci rezervasyon açılamaz. Kontrol ve kayıt tek transaction içinde yapılır.
+- **Oda yaşam döngüsü:** kirli ya da bakımdaki odaya giriş yapılamaz; çıkış odayı kirliye çeker ve temizlik görevi açar, görev tamamlanınca oda yeniden satışa çıkar.
+- **Sadakat:** her konaklanan gece puan kazandırır; 200 puanda Gümüş, 500 puanda Altın.
+- **KPI:** doluluk = satılan gece / satılabilir gece, ADR = oda geliri / satılan gece, RevPAR = oda geliri / satılabilir gece. Bakımdaki odalar satılabilir geceden düşülür.
+
+<p>
+<img src="docs/otel/01-gosterge-paneli.png" width="49%">
+<img src="docs/otel/02-oda-haritasi.png" width="49%">
+<img src="docs/otel/03-rezervasyon-cizelgesi.png" width="49%">
+<img src="docs/otel/07-yeni-rezervasyon.png" width="49%">
+<img src="docs/otel/08-folyo.png" width="49%">
+<img src="docs/otel/09-koyu-tema.png" width="49%">
+</p>
+
+Çalıştırmak için `otel-calistir.bat` ya da:
+
+```
+dotnet run --project src/Apps/Otel/Otel.WinForms -c Release
+```
+
+Arayüz [Onda](https://ondercode.com/projeler/onda) bileşenlerini kullanır; Onda deposu bu deponun yanındaki `Onda` klasöründe beklenir (`OndaProject` özelliğiyle değiştirilebilir). Veritabanı `%LocalAppData%\OnderCode\Otel\Otel.db`; silinirse uygulama örnek veriyle yeniden oluşturur. `otel-ekran-goruntuleri.bat` yukarıdaki ekran görüntülerini boş bir veritabanıyla yeniden üretir.
 
 ## Bilinçli tercihler
 

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Otel otomasyonu masaüstü arayüzü. Standart WinForms kontrolleri yerine Onda bileşenleri. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationHighDpiMode>SystemAware</ApplicationHighDpiMode>
+    <RootNamespace>Otel.WinForms</RootNamespace>
+    <AssemblyName>OtelOtomasyonu</AssemblyName>
+    <Product>Otel Otomasyonu</Product>
+    <AssemblyTitle>Otel Otomasyonu</AssemblyTitle>
+    <!-- Özel kontrollerin verisi metotla verilir; tasarımcı serileştirme uyarısı bu proje için anlamsız -->
+    <NoWarn>$(NoWarn);WFO1000</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Using Include="Onda" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Otel.Infrastructure\Otel.Infrastructure.csproj" />
+    <ProjectReference Include="$(OndaProject)" />
+  </ItemGroup>
+</Project>

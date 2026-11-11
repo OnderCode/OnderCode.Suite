@@ -15,5 +15,7 @@
     <Copyright>© 2026 Abdurrahman Önder</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Version>0.1.0</Version>
+    <!-- Arayüz bileşenleri: Onda. Varsayılan olarak bu klasörün yanındaki Onda deposundan derlenir. -->
+    <OndaProject Condition="'$(OndaProject)' == ''">$(MSBuildThisFileDirectory)..\Onda\src\Onda.WinForms\Onda.WinForms.csproj</OndaProject>
   </PropertyGroup>
 </Project>

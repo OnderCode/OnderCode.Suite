@@ -9,3 +9,5 @@ TestResults/
 *.db-shm
 test.log
 git.log
+otel-build.log
+docs/otel/veri/

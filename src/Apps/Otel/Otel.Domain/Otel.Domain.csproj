@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Otel alan modeli: oda, rezervasyon, misafir, folyo, kat hizmetleri, fiyat motoru. Altyapıdan bağımsız. -->
+  <PropertyGroup>
+    <RootNamespace>Otel.Domain</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Shared\OnderCode.Kernel\OnderCode.Kernel.csproj" />
+  </ItemGroup>
+</Project>

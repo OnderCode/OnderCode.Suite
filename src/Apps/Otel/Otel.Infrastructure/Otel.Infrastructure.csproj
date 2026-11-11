@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Otel veri erişimi: EF Core + SQLite bağlamı, eşlemeler, örnek veri. -->
+  <PropertyGroup>
+    <RootNamespace>Otel.Infrastructure</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Otel.Application\Otel.Application.csproj" />
+    <ProjectReference Include="..\..\..\Shared\OnderCode.Data\OnderCode.Data.csproj" />
+  </ItemGroup>
+</Project>

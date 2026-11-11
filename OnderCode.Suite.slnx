@@ -11,8 +11,16 @@
     <Project Path="src/Shared/OnderCode.Data/OnderCode.Data.csproj" />
     <Project Path="src/Shared/OnderCode.Application/OnderCode.Application.csproj" />
   </Folder>
+  <Folder Name="/src/Apps/" />
+  <Folder Name="/src/Apps/Otel/">
+    <Project Path="src/Apps/Otel/Otel.Domain/Otel.Domain.csproj" />
+    <Project Path="src/Apps/Otel/Otel.Application/Otel.Application.csproj" />
+    <Project Path="src/Apps/Otel/Otel.Infrastructure/Otel.Infrastructure.csproj" />
+    <Project Path="src/Apps/Otel/Otel.WinForms/Otel.WinForms.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/OnderCode.Data.Tests/OnderCode.Data.Tests.csproj" />
     <Project Path="tests/OnderCode.Application.Tests/OnderCode.Application.Tests.csproj" />
+    <Project Path="tests/Otel.Tests/Otel.Tests.csproj" />
   </Folder>
 </Solution>

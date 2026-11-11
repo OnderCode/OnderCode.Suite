@@ -7,7 +7,7 @@ namespace Otel.WinForms.Reports;
 /// <summary>Uygulama katmanının rapor sonuçlarını biçimden bağımsız <see cref="ReportDocument"/>'e çevirir (Excel, PDF, CSV).</summary>
 static class OtelReports
 {
-    public const string Hotel = "Lale Otel";
+    public const string Hotel = "OnderCode Otel";
 
     public static ReportDocument Revenue(RevenueReport r)
     {
@@ -73,7 +73,7 @@ static class OtelReports
 
         doc.Notes.Add("OCC (doluluk) = satılan oda-gece / satılabilir oda-gece. ADR = oda geliri / satılan oda-gece. RevPAR = oda geliri / satılabilir oda-gece = OCC × ADR.");
         doc.Notes.Add("Konaklama geliri gecelere eşit dağıtılır; iptal edilen rezervasyonlar hesaba katılmaz. Karşılaştırmalar aynı uzunluktaki bir önceki döneme göredir.");
-        doc.Notes.Add("Lale Otel kurgusal bir oteldir; bütün veriler örnektir.");
+        doc.Notes.Add("Bütün misafirler ve rezervasyonlar örnek veridir.");
         return doc;
     }
 

@@ -19,7 +19,7 @@ public class ExportTests
         {
             Title = "Gelir ve Doluluk Raporu",
             Subtitle = "01.11.2026 – 30.11.2026",
-            Organization = "Lale Otel",
+            Organization = "OnderCode Otel",
             GeneratedAt = new DateTime(2026, 11, 11, 20, 30, 0),
             Landscape = landscape,
         };

@@ -1,10 +1,10 @@
-Otel Otomasyonu · OnderCode Suite
-=================================
+OnderCode Otel
+==============
 
-Kurulum gerekmez. OtelOtomasyonu.exe dosyasını çalıştırın.
+Kurulum gerekmez. OnderCodeOtel.exe dosyasını çalıştırın.
 Windows 10 / 11 (64 bit). .NET kurulu olması gerekmez.
 
-İlk açılışta "Lale Otel" örnek verisiyle dolu bir veritabanı oluşturulur:
+İlk açılışta örnek veriyle dolu bir veritabanı oluşturulur:
 26 oda, 140 kurgusal misafir, rezervasyon geçmişi ve gelecek rezervasyonlar.
 Örnek verideki bütün kişiler ve rezervasyonlar uydurmadır.
 

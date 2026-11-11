@@ -1,5 +1,5 @@
 @echo off
-chcp 65001 >nul
+set DOTNET_CLI_UI_LANGUAGE=en
 rem Onda kutuphanesini lib\Onda'ya kopyalar, DLL ile derlemeyi dogrular, Otel'i tek dosya olarak paketler. Sonuc: yayin.log
 cd /d "%~dp0"
 echo BASLADI > yayin.log
@@ -13,7 +13,7 @@ if exist publish rmdir /s /q publish
 dotnet publish src\Apps\Otel\Otel.WinForms\Otel.WinForms.csproj -c Release -r win-x64 --self-contained true -p:UseOndaDll=true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -o publish\otel >> yayin.log 2>&1 || (echo YAYIN HATASI >> yayin.log & exit /b 1)
 copy /y docs\BENIOKU-otel.txt publish\otel\BENIOKU.txt >nul
 copy /y LICENSE publish\otel\LICENSE.txt >nul
-powershell -NoProfile -Command "Compress-Archive -Path 'publish\otel\*' -DestinationPath 'publish\Otel-Otomasyonu-v0.1.zip' -Force" >> yayin.log 2>&1
+powershell -NoProfile -Command "Compress-Archive -Path 'publish\otel\*' -DestinationPath 'publish\OnderCode-Otel-v0.1.zip' -Force" >> yayin.log 2>&1
 dir publish\otel >> yayin.log
 dir publish\*.zip >> yayin.log
 call :findgit

@@ -1,5 +1,5 @@
 @echo off
-chcp 65001 >nul
+set DOTNET_CLI_UI_LANGUAGE=en
 rem Testler + Otel arayuzu derlemesi + ekran goruntuleri ve ornek raporlar. Ozet: dogrula.log
 cd /d "%~dp0"
 echo BASLADI > dogrula.log

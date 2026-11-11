@@ -7,8 +7,8 @@ sealed class ShellForm : OndaForm
 {
     readonly OndaSideMenu _menu = new()
     {
-        Title = "Lale Otel",
-        Subtitle = "Otel Otomasyonu",
+        Title = "OnderCode Otel",
+        Subtitle = "Otel otomasyonu",
         UserName = Environment.UserName,
         UserRole = "Ön büro",
     };
@@ -17,7 +17,7 @@ sealed class ShellForm : OndaForm
 
     public ShellForm()
     {
-        Text = "Lale Otel · OnderCode Suite";
+        Text = "OnderCode Otel";
         TitleIcon = "";
         Size = new Size(1440, 900);
         MinimumSize = new Size(1240, 780);
@@ -54,7 +54,7 @@ sealed class ShellForm : OndaForm
         if (key == "about")
         {
             OndaMessageBox.Info(this,
-                "Lale Otel kurgusal bir oteldir; bütün kişiler ve rezervasyonlar örnek veridir.\n\n" +
+                "OnderCode Otel: otel ön büro ve raporlama otomasyonu. Bütün misafirler ve rezervasyonlar örnek veridir.\n\n" +
                 "OnderCode Suite: .NET 10, katmanlı mimari, EF Core + SQLite (kurulumsuz), Onda arayüz bileşenleri.\n" +
                 "Açık kaynak, MIT lisanslı.\n\nAbdurrahman Önder · ondercode.com", "Hakkında");
             return;

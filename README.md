@@ -21,12 +21,12 @@ OnderCode.Suite/
 │  │  ├─ OnderCode.Reporting     Rapor modeli; Excel (kendi yazıcımız), PDF (PDFsharp), CSV
 │  │  └─ OnderCode.WinForms      (sırada) Onda bileşenleri üzerine uygulama kabuğu, DI, navigasyon
 │  └─ Apps/                      her uygulama 4 katman: Domain · Application · Infrastructure · WinForms
-│     ├─ Otel/                     ✔ hazır
-│     ├─ Otopark/                  (sırada)
-│     ├─ Eczane/
-│     ├─ SiteYonetimi/
-│     ├─ Lojistik/
-│     └─ Personel/
+│     ├─ Otel/                     OnderCode Otel ✔ hazır
+│     ├─ Otopark/                  OnderCode Otopark (sırada)
+│     ├─ Eczane/                   OnderCode Eczane
+│     ├─ SiteYonetimi/             OnderCode Site Yönetimi
+│     ├─ Lojistik/                 OnderCode Lojistik
+│     └─ Personel/                 OnderCode Personel
 └─ tests/
    ├─ OnderCode.Data.Tests          Gerçek SQLite dosyası üzerinde veri katmanı testleri
    ├─ OnderCode.Application.Tests   Dağıtıcı + hat + veri katmanı birlikte, uçtan uca
@@ -122,9 +122,9 @@ oda.TemizlikTamamlandi();
 await uow.SaveChangesAsync();   // denetim, sürüm, olaylar kendiliğinden
 ```
 
-## Otel Otomasyonu
+## OnderCode Otel
 
-Kurulumsuz çalışan küçük bir otel ön büro uygulaması. İlk açılışta "Lale Otel" örnek verisiyle (26 oda, 140 kurgusal misafir, 4 aylık rezervasyon geçmişi ve geleceği) dolu gelir. Örnek verideki bütün isimler uydurmadır; kimlik ve telefon bilgisi yoktur.
+Kurulumsuz çalışan küçük bir otel ön büro uygulaması. İlk açılışta örnek veriyle (26 oda, 140 kurgusal misafir, 4 aylık rezervasyon geçmişi ve geleceği) dolu gelir. Örnek verideki bütün isimler uydurmadır; kimlik ve telefon bilgisi yoktur.
 
 | Ekran | Ne yapar |
 |---|---|
@@ -166,7 +166,7 @@ Arayüz [Onda](https://ondercode.com/projeler/onda) bileşenlerini kullanır. On
 Uygulamalar rapor verisini biçimden bağımsız bir `ReportDocument` olarak kurar: göstergeler, grafikler, tablolar, notlar. Aynı belge üç biçime yazılır.
 
 ```csharp
-var doc = new ReportDocument { Title = "Gelir ve Doluluk Raporu", Organization = "Lale Otel" };
+var doc = new ReportDocument { Title = "Gelir ve Doluluk Raporu", Organization = "OnderCode Otel" };
 doc.Kpis.Add(new ReportKpi("Doluluk", ReportFormat.Percent(0.784)));
 doc.Tables.Add(ReportTable.For("Günlük döküm", gunler)
     .Date("Tarih", g => g.Tarih)

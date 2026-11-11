@@ -6,7 +6,7 @@ using Otel.Domain;
 namespace Otel.Infrastructure;
 
 /// <summary>
-/// Demo verisi: 4 katlı, 26 odalı kurgusal "Lale Otel". Geçmiş 75 gün ve gelecek 45 gün için
+/// Demo verisi: 4 katlı, 26 odalı örnek otel. Geçmiş 75 gün ve gelecek 45 gün için
 /// rezervasyonlar bugünün tarihine göre üretilir; uygulama hangi gün açılırsa açılsın gösterge paneli canlı görünür.
 /// Bütün kişiler uydurmadır; kimlik ve telefon numarası yoktur.
 /// </summary>

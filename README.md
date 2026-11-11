@@ -159,7 +159,7 @@ Kurulumsuz çalışan küçük bir otel ön büro uygulaması. İlk açılışta
 dotnet run --project src/Apps/Otel/Otel.WinForms -c Release
 ```
 
-Arayüz [Onda](https://ondercode.com/projeler/onda) bileşenlerini kullanır; Onda deposu bu deponun yanındaki `Onda` klasöründe beklenir (`OndaProject` özelliğiyle değiştirilebilir). Veritabanı `%LocalAppData%\OnderCode\Otel\Otel.db`; silinirse uygulama örnek veriyle yeniden oluşturur. `otel-ekran-goruntuleri.bat` yukarıdaki ekran görüntülerini boş bir veritabanıyla yeniden üretir.
+Arayüz [Onda](https://ondercode.com/projeler/onda) bileşenlerini kullanır. Onda bu depoda derlenmiş kütüphane olarak durur (`lib/Onda`, MIT); ek bir şey kurmadan derlenir. Onda'nın kaynak koduyla çalışmak isteyenler için: deponun yanında `Onda` klasörü varsa proje oradan derlenir (`OndaProject` özelliğiyle yol değiştirilebilir). Veritabanı `%LocalAppData%\OnderCode\Otel\Otel.db`; silinirse uygulama örnek veriyle yeniden oluşturur. `otel-ekran-goruntuleri.bat` yukarıdaki ekran görüntülerini boş bir veritabanıyla yeniden üretir.
 
 ## Raporlama ve analiz
 
@@ -205,6 +205,10 @@ Analiz araçları (`OnderCode.Analytics`) Application katmanında kullanılır v
 - **Excel için paket yok.** EPPlus ücretli; ClosedXML'in kullandığı SixLabors.Fonts'un yeni sürümleri gelir sınırlı lisanslı. Gereken kadarını yazan küçük bir XLSX yazıcısı daha sade.
 - **Arayüzde Onda.** Standart WinForms kontrolleri yerine [Onda](https://ondercode.com/projeler/onda) bileşenleri.
 - **Generic repository, ama ince.** EF Core zaten bir iş birimi; buradaki katman onu gizlemek için değil, Application katmanını EF'den bağımsız tutmak ve ortak kuralları (Türkçe arama, sayfalama, hata çevirisi) tek yerde toplamak için var. Ağır rapor sorguları Infrastructure'da doğrudan DbContext ile yazılır.
+
+## İndir
+
+Hazır uygulama (kurulum gerekmez, Windows 10/11 x64): [ondercode.com/projeler/ondercode-suite](https://ondercode.com/projeler/ondercode-suite)
 
 ## Derleme ve test
 

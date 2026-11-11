@@ -1,0 +1,23 @@
+Otel Otomasyonu · OnderCode Suite
+=================================
+
+Kurulum gerekmez. OtelOtomasyonu.exe dosyasını çalıştırın.
+Windows 10 / 11 (64 bit). .NET kurulu olması gerekmez.
+
+İlk açılışta "Lale Otel" örnek verisiyle dolu bir veritabanı oluşturulur:
+26 oda, 140 kurgusal misafir, rezervasyon geçmişi ve gelecek rezervasyonlar.
+Örnek verideki bütün kişiler ve rezervasyonlar uydurmadır.
+
+Veritabanı: %LocalAppData%\OnderCode\Otel\Otel.db
+Silerseniz uygulama bir sonraki açılışta örnek veriyle yeniden oluşturur.
+Exe'nin yanına "portable" adında boş bir dosya koyarsanız veritabanı
+exe'nin yanındaki Data klasöründe tutulur.
+
+Ekranlar: gösterge paneli, oda haritası, rezervasyon çizelgesi,
+rezervasyonlar, misafirler, kat hizmetleri ve raporlar
+(Excel, PDF ve CSV çıktısı).
+
+Kaynak kod (MIT lisansı): github.com/abdOnderDotNet/OnderCode.Suite
+Web: ondercode.com
+
+Abdurrahman Önder

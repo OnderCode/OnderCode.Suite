@@ -12,6 +12,7 @@
     <Project Path="src/Shared/OnderCode.Application/OnderCode.Application.csproj" />
     <Project Path="src/Shared/OnderCode.Analytics/OnderCode.Analytics.csproj" />
     <Project Path="src/Shared/OnderCode.Reporting/OnderCode.Reporting.csproj" />
+    <Project Path="src/Shared/OnderCode.WinForms/OnderCode.WinForms.csproj" />
   </Folder>
   <Folder Name="/src/Apps/" />
   <Folder Name="/src/Apps/Otel/">
@@ -20,10 +21,17 @@
     <Project Path="src/Apps/Otel/Otel.Infrastructure/Otel.Infrastructure.csproj" />
     <Project Path="src/Apps/Otel/Otel.WinForms/Otel.WinForms.csproj" />
   </Folder>
+  <Folder Name="/src/Apps/Otopark/">
+    <Project Path="src/Apps/Otopark/Otopark.Domain/Otopark.Domain.csproj" />
+    <Project Path="src/Apps/Otopark/Otopark.Application/Otopark.Application.csproj" />
+    <Project Path="src/Apps/Otopark/Otopark.Infrastructure/Otopark.Infrastructure.csproj" />
+    <Project Path="src/Apps/Otopark/Otopark.WinForms/Otopark.WinForms.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/OnderCode.Data.Tests/OnderCode.Data.Tests.csproj" />
     <Project Path="tests/OnderCode.Application.Tests/OnderCode.Application.Tests.csproj" />
     <Project Path="tests/OnderCode.Reporting.Tests/OnderCode.Reporting.Tests.csproj" />
     <Project Path="tests/Otel.Tests/Otel.Tests.csproj" />
+    <Project Path="tests/Otopark.Tests/Otopark.Tests.csproj" />
   </Folder>
 </Solution>

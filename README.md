@@ -19,11 +19,11 @@ OnderCode.Suite/
 │  │                          FluentValidation), Result türü, alan olayı dağıtıcısı
 │  │  ├─ OnderCode.Analytics     Bağımlılıksız analiz: Pareto/ABC, doğrusal trend, Holt, Holt-Winters
 │  │  ├─ OnderCode.Reporting     Rapor modeli; Excel (kendi yazıcımız), PDF (PDFsharp), CSV
-│  │  └─ OnderCode.WinForms      (sırada) Onda bileşenleri üzerine uygulama kabuğu, DI, navigasyon
+│  │  └─ OnderCode.WinForms      Uygulamaların ortak arayüz parçaları: sayfa tabanı, rapor kaydetme, ekran görüntüsü
 │  └─ Apps/                      her uygulama 4 katman: Domain · Application · Infrastructure · WinForms
 │     ├─ Otel/                     OnderCode Otel ✔ hazır
-│     ├─ Otopark/                  OnderCode Otopark (sırada)
-│     ├─ Eczane/                   OnderCode Eczane
+│     ├─ Otopark/                  OnderCode Otopark ✔ hazır (otopark + araç yıkama)
+│     ├─ Eczane/                   OnderCode Eczane (sırada)
 │     ├─ SiteYonetimi/             OnderCode Site Yönetimi
 │     ├─ Lojistik/                 OnderCode Lojistik
 │     └─ Personel/                 OnderCode Personel
@@ -31,7 +31,8 @@ OnderCode.Suite/
    ├─ OnderCode.Data.Tests          Gerçek SQLite dosyası üzerinde veri katmanı testleri
    ├─ OnderCode.Application.Tests   Dağıtıcı + hat + veri katmanı birlikte, uçtan uca
    ├─ OnderCode.Reporting.Tests     Pareto ve tahmin doğruluğu; Excel/PDF/CSV çıktılarının yapısı
-   └─ Otel.Tests                    Fiyat motoru, çakışma kuralı, KPI hesabı, raporlar, örnek veriyle uçtan uca akış
+   ├─ Otel.Tests                    Fiyat motoru, çakışma kuralı, KPI hesabı, raporlar, örnek veriyle uçtan uca akış
+   └─ Otopark.Tests                 Tarife motoru, plaka doğrulama, yıkama iş akışı, abonelik, raporlar, uçtan uca gişe akışı
 ```
 
 Bağımlılık yönü tek taraflıdır: `WinForms → Infrastructure → Application → Domain → Kernel`.
@@ -160,6 +161,40 @@ dotnet run --project src/Apps/Otel/Otel.WinForms -c Release
 ```
 
 Arayüz [Onda](https://ondercode.com/projeler/onda) bileşenlerini kullanır. Onda bu depoda derlenmiş kütüphane olarak durur (`lib/Onda`, MIT); ek bir şey kurmadan derlenir. Onda'nın kaynak koduyla çalışmak isteyenler için: deponun yanında `Onda` klasörü varsa proje oradan derlenir (`OndaProject` özelliğiyle yol değiştirilebilir). Veritabanı `%LocalAppData%\OnderCode\Otel\Otel.db`; silinirse uygulama örnek veriyle yeniden oluşturur. `otel-ekran-goruntuleri.bat` yukarıdaki ekran görüntülerini boş bir veritabanıyla yeniden üretir.
+
+## OnderCode Otopark
+
+Otopark gişesi ve araç yıkama birlikte. İlk açılışta örnek veriyle gelir: 74 park yeri (zemin, -1. kat, büyük araç, motosiklet; engelli ve elektrikli şarj yerleri), 5 yıkama paketi, 28 abone ve son dokuz haftanın araç hareketleri. Bütün plakalar ve isimler uydurmadır; telefon bilgisi yoktur.
+
+| Ekran | Ne yapar |
+|---|---|
+| Gösterge paneli | İçerideki araç, doluluk, bugünkü otopark ve yıkama geliri, ortalama kalış; saatlik giriş (bugün ve olağan gün), son 30 gün ciro, yıkama kuyruğu özeti, son hareketler |
+| Otopark haritası | Bölge bölge park yerleri; dolu yerde plaka, süre ve o anki ücret, yıkamadaki araçta durum noktası. Yere tıklayınca giriş, çıkış, yıkama siparişi, kullanım dışı bırakma |
+| Araç hareketleri | İçeride / bugün / tümü, plaka araması, Excel çıktısı |
+| Yıkama kuyruğu | Bekliyor → Yıkanıyor → Hazır → Teslim panosu; 3 yıkama yerine göre tahmini bitiş saati, yıkamacı atama |
+| Abonelikler | Aylık abonelik, uzatma, biten ve yakında bitecek abonelikler, son 30 gün kullanım |
+| Raporlar | Gelir (otopark + yıkama, araç sınıfı, paket ABC, ödeme türü; önceki dönemle karşılaştırmalı), yoğunluk saatleri (gün × saat ortalama doluluk, en yoğun dilimler), 7-30 günlük ciro tahmini; Excel, PDF ve CSV |
+
+Kısayollar: F2 araç girişi, F3 plaka ile çıkış ve tahsilat, F4 yıkama siparişi.
+
+İş kuralları Domain katmanında ve testli:
+
+- **Tarife motoru:** ilk 15 dakika ücretsiz; ilk saat ve sonraki her başlamış saat ayrı ücretli, her 24 saat için günlük üst sınır. Araç sınıfına göre (otomobil, büyük araç, motosiklet) ayrı tarife.
+- **Yıkama indirimi:** yıkama yaptıranın ilk 2 saati otoparktan düşülür. Abonelerden otopark ücreti alınmaz.
+- **Plaka:** Türkiye plaka biçimi (il kodu 01-81, harf ve rakam sayısı kuralları) doğrulanır ve `34 ABC 123` biçimine getirilir; aynı plaka iki kez içeride olamaz (veritabanında da süzgeçli benzersiz indeks).
+- **Park yeri:** büyük araç yalnız büyük araç yerine, motosiklet yalnız motosiklet yerine; otomobile önce standart yer önerilir, engelli ve şarj yerleri en sona kalır. Kullanım dışı yere araç alınmaz.
+- **Yıkama iş akışı:** Bekliyor → Yıkanıyor → Hazır → Teslim; yalnız bekleyen sipariş iptal edilir. Yıkaması bitmemiş araç çıkış yapamaz; otoparktaki aracın yıkaması çıkışta teslim edilir ve tutarı aynı fişe eklenir.
+
+<p>
+<img src="docs/otopark/01-gosterge-paneli.png" width="49%">
+<img src="docs/otopark/02-otopark-haritasi.png" width="49%">
+<img src="docs/otopark/04-yikama-kuyrugu.png" width="49%">
+<img src="docs/otopark/07-rapor-yogunluk.png" width="49%">
+<img src="docs/otopark/10-cikis-tahsilat.png" width="49%">
+<img src="docs/otopark/11-koyu-tema.png" width="49%">
+</p>
+
+Çalıştırmak için `otopark-calistir.bat` ya da `dotnet run --project src/Apps/Otopark/Otopark.WinForms -c Release`. Örnek rapor çıktıları: [docs/otopark/ornek-raporlar](docs/otopark/ornek-raporlar).
 
 ## Raporlama ve analiz
 

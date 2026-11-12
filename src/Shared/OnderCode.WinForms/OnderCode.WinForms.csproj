@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Uygulamaların ortak masaüstü parçaları: sayfa iskeleti, rapor kaydetme, ekran görüntüsü. Onda bileşenleri üzerine. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>OnderCode.WinForms</RootNamespace>
+    <UseOnda>true</UseOnda>
+    <NoWarn>$(NoWarn);WFO1000</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\OnderCode.Reporting\OnderCode.Reporting.csproj" />
+  </ItemGroup>
+</Project>

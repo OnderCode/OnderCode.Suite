@@ -1,7 +1,7 @@
-namespace Otel.WinForms.Pages;
+namespace OnderCode.WinForms;
 
 /// <summary>Sayfa iskeleti: başlık, alt başlık, içerik yerleşimi ve veri yenileme.</summary>
-abstract class PageBase : OndaPanel
+public abstract class PageBase : OndaPanel
 {
     protected const int M = 28, Gap = 20, ContentY = 100;
     readonly OndaLabel _title = new() { Style = OndaLabelStyle.Header };
@@ -30,7 +30,7 @@ abstract class PageBase : OndaPanel
 
     protected abstract void LayoutPage(Rectangle r);
 
-    /// <summary>Verileri uygulama katmanından yeniden çeker.</summary>
+    /// <summary>Verileri uygulama katmanından yeniden çeker. Yükleme sürerken gelen istek yok sayılır.</summary>
     public async Task ReloadAsync()
     {
         if (_loading) return;
@@ -48,6 +48,7 @@ abstract class PageBase : OndaPanel
         _ = ReloadAsync();
     }
 
+    /// <summary>Kontrolleri sağdan sola, verilen y'de dizer.</summary>
     protected static void RightAlign(int right, int y, params Control[] items)
     {
         var x = right;

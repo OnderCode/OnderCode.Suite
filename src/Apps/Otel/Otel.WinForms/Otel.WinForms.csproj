@@ -11,21 +11,13 @@
     <AssemblyTitle>OnderCode Otel</AssemblyTitle>
     <!-- Özel kontrollerin verisi metotla verilir; tasarımcı serileştirme uyarısı bu proje için anlamsız -->
     <NoWarn>$(NoWarn);WFO1000</NoWarn>
+    <UseOnda>true</UseOnda>
   </PropertyGroup>
   <ItemGroup>
-    <Using Include="Onda" />
+    <Using Include="OnderCode.WinForms" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Otel.Infrastructure\Otel.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\..\Shared\OnderCode.Reporting\OnderCode.Reporting.csproj" />
-  </ItemGroup>
-  <!-- Onda: yanındaki Onda deposu varsa kaynaktan, yoksa depodaki derlenmiş kütüphaneden (lib\Onda) -->
-  <ItemGroup Condition="Exists('$(OndaProject)') And '$(UseOndaDll)' != 'true'">
-    <ProjectReference Include="$(OndaProject)" />
-  </ItemGroup>
-  <ItemGroup Condition="!Exists('$(OndaProject)') Or '$(UseOndaDll)' == 'true'">
-    <Reference Include="Onda.WinForms">
-      <HintPath>$(MSBuildThisFileDirectory)..\..\..\..\lib\Onda\Onda.WinForms.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="..\..\..\Shared\OnderCode.WinForms\OnderCode.WinForms.csproj" />
   </ItemGroup>
 </Project>

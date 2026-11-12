@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Otopark veri erişimi: EF Core + SQLite bağlamı, eşlemeler, örnek veri. -->
+  <PropertyGroup>
+    <RootNamespace>Otopark.Infrastructure</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Otopark.Application\Otopark.Application.csproj" />
+    <ProjectReference Include="..\..\..\Shared\OnderCode.Data\OnderCode.Data.csproj" />
+  </ItemGroup>
+</Project>

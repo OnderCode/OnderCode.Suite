@@ -1,0 +1,29 @@
+OnderCode Otopark
+=================
+
+Otopark gişesi ve araç yıkama otomasyonu.
+Kurulum gerekmez. OnderCodeOtopark.exe dosyasını çalıştırın.
+Windows 10 / 11 (64 bit). .NET kurulu olması gerekmez.
+
+İlk açılışta örnek veriyle dolu bir veritabanı oluşturulur:
+74 park yeri (zemin, -1. kat, büyük araç, motosiklet), 5 yıkama paketi,
+28 abone ve son dokuz haftanın araç hareketleri.
+Örnek verideki bütün plakalar ve kişiler uydurmadır.
+
+Kısayollar: F2 araç girişi, F3 çıkış ve tahsilat, F4 yıkama siparişi.
+Tarife: ilk 15 dakika ücretsiz, ilk saat ve ek saat ücreti, günlük üst sınır.
+Yıkama yaptırana ilk 2 saat otopark ücretsiz; abonelerden ücret alınmaz.
+
+Veritabanı: %LocalAppData%\OnderCode\Otopark\Otopark.db
+Silerseniz uygulama bir sonraki açılışta örnek veriyle yeniden oluşturur.
+Exe'nin yanına "portable" adında boş bir dosya koyarsanız veritabanı
+exe'nin yanındaki Data klasöründe tutulur.
+
+Ekranlar: gösterge paneli, otopark haritası, araç hareketleri,
+yıkama kuyruğu, abonelikler ve raporlar (gelir, yoğunluk saatleri,
+ciro tahmini; Excel, PDF ve CSV çıktısı).
+
+Kaynak kod (MIT lisansı): github.com/abdOnderDotNet/OnderCode.Suite
+Web: ondercode.com
+
+Abdurrahman Önder

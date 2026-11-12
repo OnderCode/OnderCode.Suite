@@ -21,5 +21,9 @@ public static class TurkishRules
         rule.Must(v => IsEmpty(v) || TurkishIdentity.IsValidIban(v as string))
             .WithMessage("'{PropertyName}' geçerli bir IBAN değil.");
 
+    public static IRuleBuilderOptions<T, TProperty> Plate<T, TProperty>(this IRuleBuilder<T, TProperty> rule) =>
+        rule.Must(v => IsEmpty(v) || TurkishPlate.IsValid(v as string))
+            .WithMessage("'{PropertyName}' geçerli bir plaka değil (ör. 34 ABC 123).");
+
     private static bool IsEmpty<TProperty>(TProperty value) => value is null || value is string { Length: 0 };
 }

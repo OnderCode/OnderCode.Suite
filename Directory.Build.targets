@@ -1,0 +1,15 @@
+<Project>
+  <!-- Onda arayüz bileşenleri: <UseOnda>true</UseOnda> diyen projelere eklenir.
+       Yanındaki Onda deposu varsa kaynaktan, yoksa bu depodaki derlenmiş kütüphaneden (lib\Onda). -->
+  <ItemGroup Condition="'$(UseOnda)' == 'true'">
+    <Using Include="Onda" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(UseOnda)' == 'true' And Exists('$(OndaProject)') And '$(UseOndaDll)' != 'true'">
+    <ProjectReference Include="$(OndaProject)" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(UseOnda)' == 'true' And (!Exists('$(OndaProject)') Or '$(UseOndaDll)' == 'true')">
+    <Reference Include="Onda.WinForms">
+      <HintPath>$(MSBuildThisFileDirectory)lib\Onda\Onda.WinForms.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>

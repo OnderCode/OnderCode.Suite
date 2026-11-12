@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Otopark ve araç yıkama alan modeli: park yeri, araç girişi/çıkışı, tarife motoru, abonelik, yıkama iş emri. Altyapıdan bağımsız. -->
+  <PropertyGroup>
+    <RootNamespace>Otopark.Domain</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Shared\OnderCode.Kernel\OnderCode.Kernel.csproj" />
+  </ItemGroup>
+</Project>

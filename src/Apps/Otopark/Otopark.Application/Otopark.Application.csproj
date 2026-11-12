@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Otopark ve yıkama kullanım senaryoları: giriş/çıkış, ücret, yıkama kuyruğu, abonelik, gösterge paneli, raporlar. -->
+  <PropertyGroup>
+    <RootNamespace>Otopark.Application</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Otopark.Domain\Otopark.Domain.csproj" />
+    <ProjectReference Include="..\..\..\Shared\OnderCode.Application\OnderCode.Application.csproj" />
+    <ProjectReference Include="..\..\..\Shared\OnderCode.Analytics\OnderCode.Analytics.csproj" />
+  </ItemGroup>
+</Project>

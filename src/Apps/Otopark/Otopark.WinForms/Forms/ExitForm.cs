@@ -138,7 +138,7 @@ sealed class ExitForm : OndaForm
     /// <summary>Gişede plaka sorma penceresi.</summary>
     sealed class PlatePrompt : OndaForm
     {
-        readonly OndaTextBox _text = new() { Label = "Çıkış yapacak aracın plakası", Required = true, Placeholder = "34 ABC 123", Icon = "", MaxLength = 12, EnterMovesNext = false };
+        readonly OndaTextBox _text = new() { Label = "Çıkış yapacak aracın plakası", Required = true, Placeholder = "34 XWQ 123", Icon = "", MaxLength = 12, EnterMovesNext = false };
         readonly OndaButton _ok = new() { Text = "Bul", Icon = "", Width = 120 };
         readonly OndaButton _cancel = new() { Action = OndaAction.Cancel, DialogResult = DialogResult.Cancel, Width = 110 };
 

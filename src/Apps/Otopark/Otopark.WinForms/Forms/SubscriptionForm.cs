@@ -11,7 +11,7 @@ sealed class SubscriptionForm : OndaForm
     static readonly VehicleClass[] Vehicles = [VehicleClass.Car, VehicleClass.Large, VehicleClass.Motorcycle];
     static readonly int[] Months = [1, 3, 6, 12];
 
-    readonly OndaTextBox _plate = new() { Label = "Plaka", Required = true, Placeholder = "34 ABC 123", Icon = "", MaxLength = 12 };
+    readonly OndaTextBox _plate = new() { Label = "Plaka", Required = true, Placeholder = "34 XWQ 123", Icon = "", MaxLength = 12 };
     readonly OndaTextBox _owner = new() { Label = "Abone adı", Required = true, Icon = "" };
     readonly OndaSegmented _vehicle = new() { Items = ["Otomobil", "Büyük araç", "Motosiklet"] };
     readonly OndaSegmented _months = new() { Items = ["1 ay", "3 ay", "6 ay", "12 ay"] };
@@ -41,7 +41,7 @@ sealed class SubscriptionForm : OndaForm
 
         _vehicle.SelectedIndex = 0;
         _months.SelectedIndex = 0;
-        _plate.ValidateValue += (_, e) => { if (!string.IsNullOrWhiteSpace(e.Value) && !TurkishPlate.IsValid(e.Value)) e.Error = "Geçerli bir plaka girin (ör. 34 ABC 123)."; };
+        _plate.ValidateValue += (_, e) => { if (!string.IsNullOrWhiteSpace(e.Value) && !TurkishPlate.IsValid(e.Value)) e.Error = "Geçerli bir plaka girin (ör. 34 XWQ 123)."; };
         _plate.Leave += (_, _) => { if (TurkishPlate.Normalize(_plate.Text) is { } p) _plate.Text = p; };
         Controls.AddRange(new Control[] { _plate, _owner, _vehicle, _months, _price, _hint, _cancel, _save });
         _vehicle.SelectedIndexChanged += (_, _) => ShowPrice();

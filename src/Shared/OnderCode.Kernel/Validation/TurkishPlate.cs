@@ -5,14 +5,14 @@ namespace OnderCode.Kernel.Validation;
 /// <summary>
 /// Türk araç plakası: il kodu (01-81) + 1-3 harf + 2-4 rakam.
 /// 1 harf → 4 rakam, 2 harf → 3-4 rakam, 3 harf → 2-3 rakam. Yazım serbesttir ("34abc123", "34-ABC-123", "34 abc 123");
-/// <see cref="Normalize"/> hepsini "34 ABC 123" biçimine getirir.
+/// <see cref="Normalize"/> hepsini "34 XWQ 123" biçimine getirir.
 /// </summary>
 public static partial class TurkishPlate
 {
     [GeneratedRegex("^(?<il>\\d{2})(?<harf>[A-Z]{1,3})(?<no>\\d{2,4})$")]
     private static partial Regex Pattern();
 
-    /// <summary>Geçerliyse "34 ABC 123" biçimini, değilse null döner.</summary>
+    /// <summary>Geçerliyse "34 XWQ 123" biçimini, değilse null döner.</summary>
     public static string? Normalize(string? value)
     {
         if (string.IsNullOrWhiteSpace(value)) return null;

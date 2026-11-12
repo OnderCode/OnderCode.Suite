@@ -181,7 +181,7 @@ Kısayollar: F2 araç girişi, F3 plaka ile çıkış ve tahsilat, F4 yıkama si
 
 - **Tarife motoru:** ilk 15 dakika ücretsiz; ilk saat ve sonraki her başlamış saat ayrı ücretli, her 24 saat için günlük üst sınır. Araç sınıfına göre (otomobil, büyük araç, motosiklet) ayrı tarife.
 - **Yıkama indirimi:** yıkama yaptıranın ilk 2 saati otoparktan düşülür. Abonelerden otopark ücreti alınmaz.
-- **Plaka:** Türkiye plaka biçimi (il kodu 01-81, harf ve rakam sayısı kuralları) doğrulanır ve `34 ABC 123` biçimine getirilir; aynı plaka iki kez içeride olamaz (veritabanında da süzgeçli benzersiz indeks).
+- **Plaka:** Türkiye plaka biçimi (il kodu 01-81, harf ve rakam sayısı kuralları) doğrulanır ve `34 XWQ 123` biçimine getirilir; aynı plaka iki kez içeride olamaz (veritabanında da süzgeçli benzersiz indeks).
 - **Park yeri:** büyük araç yalnız büyük araç yerine, motosiklet yalnız motosiklet yerine; otomobile önce standart yer önerilir, engelli ve şarj yerleri en sona kalır. Kullanım dışı yere araç alınmaz.
 - **Yıkama iş akışı:** Bekliyor → Yıkanıyor → Hazır → Teslim; yalnız bekleyen sipariş iptal edilir. Yıkaması bitmemiş araç çıkış yapamaz; otoparktaki aracın yıkaması çıkışta teslim edilir ve tutarı aynı fişe eklenir.
 

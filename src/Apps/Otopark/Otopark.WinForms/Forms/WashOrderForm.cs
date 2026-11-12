@@ -10,7 +10,7 @@ sealed class WashOrderForm : OndaForm
     const int M = 28;
     static readonly VehicleClass[] Vehicles = [VehicleClass.Car, VehicleClass.Large, VehicleClass.Motorcycle];
 
-    readonly OndaTextBox _plate = new() { Label = "Plaka", Required = true, Placeholder = "34 ABC 123", Icon = "", MaxLength = 12 };
+    readonly OndaTextBox _plate = new() { Label = "Plaka", Required = true, Placeholder = "34 XWQ 123", Icon = "", MaxLength = 12 };
     readonly OndaSegmented _vehicle = new() { Items = ["Otomobil", "Büyük araç", "Motosiklet"] };
     readonly OndaLookup _package = new() { Label = "Paket", Required = true, DisplayMember = nameof(PackageOption.Name), ValueMember = nameof(PackageOption.Id), PopupWidth = 520, Icon = "" };
     readonly OndaTextBox _note = new() { Label = "Not", Placeholder = "Koltuk kılıfları, köpek tüyü…" };
@@ -46,7 +46,7 @@ sealed class WashOrderForm : OndaForm
         _package.Columns.Add(new OndaGridColumn(nameof(PackageOption.Minutes), "Dk", 60, OndaColumnKind.Number));
         _package.Columns.Add(new OndaGridColumn(nameof(PackageOption.CarPrice), "Otomobil", 110, OndaColumnKind.Money));
         _package.Columns.Add(new OndaGridColumn(nameof(PackageOption.LargePrice), "Büyük araç", 110, OndaColumnKind.Money));
-        _plate.ValidateValue += (_, e) => { if (!string.IsNullOrWhiteSpace(e.Value) && !TurkishPlate.IsValid(e.Value)) e.Error = "Geçerli bir plaka girin (ör. 34 ABC 123)."; };
+        _plate.ValidateValue += (_, e) => { if (!string.IsNullOrWhiteSpace(e.Value) && !TurkishPlate.IsValid(e.Value)) e.Error = "Geçerli bir plaka girin (ör. 34 XWQ 123)."; };
         _plate.Leave += (_, _) => { if (TurkishPlate.Normalize(_plate.Text) is { } p) _plate.Text = p; };
         Controls.AddRange(new Control[] { _plate, _vehicle, _package, _note, _price, _hint, _cancel, _save });
 

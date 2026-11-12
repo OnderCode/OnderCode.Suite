@@ -28,7 +28,8 @@ public sealed class OtoparkDemoSeeder(TimeProvider time) : ISeeder<OtoparkDbCont
     ];
 
     private static readonly string[] Washers = ["Murat", "Ercan", "Yusuf", "Sinan"];
-    private const string PlateLetters = "ABCDEFGHJKLMNPRSTUVYZ";
+    // Örnek plakalar gerçek plakalarla karışmasın: Türk plakalarında kullanılmayan X, W, Q harfleri, hep X ile başlar
+    private const string PlateLetters = "XWQ";
 
     public int Order => 0;
 
@@ -68,7 +69,7 @@ public sealed class OtoparkDemoSeeder(TimeProvider time) : ISeeder<OtoparkDbCont
                 var il = rnd.Next(100) switch { < 62 => 34, < 70 => 41, < 76 => 06, < 81 => 16, < 85 => 35, < 89 => 54, < 93 => 59, < 97 => 81, _ => 77 };
                 var letters = rnd.Next(100) switch { < 15 => 1, < 60 => 2, _ => 3 };
                 var digits = letters switch { 1 => 4, 2 => rnd.Next(2) == 0 ? 3 : 4, _ => rnd.Next(3) == 0 ? 2 : 3 };
-                var harf = string.Concat(Enumerable.Range(0, letters).Select(_ => PlateLetters[rnd.Next(PlateLetters.Length)]));
+                var harf = "X" + string.Concat(Enumerable.Range(1, letters - 1).Select(_ => PlateLetters[rnd.Next(PlateLetters.Length)]));
                 var no = rnd.Next((int)Math.Pow(10, digits - 1), (int)Math.Pow(10, digits)).ToString();
                 var plate = $"{il:00} {harf} {no}";
                 if (usedPlates.Add(plate)) return plate;

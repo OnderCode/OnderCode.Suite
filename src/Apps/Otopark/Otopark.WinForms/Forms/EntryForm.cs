@@ -13,7 +13,7 @@ sealed class EntryForm : OndaForm
     const int M = 28;
     static readonly VehicleClass[] Vehicles = [VehicleClass.Car, VehicleClass.Large, VehicleClass.Motorcycle];
 
-    readonly OndaTextBox _plate = new() { Label = "Plaka", Required = true, Placeholder = "34 ABC 123", Icon = "", MaxLength = 12 };
+    readonly OndaTextBox _plate = new() { Label = "Plaka", Required = true, Placeholder = "34 XWQ 123", Icon = "", MaxLength = 12 };
     readonly OndaSegmented _vehicle = new() { Items = ["Otomobil", "Büyük araç", "Motosiklet"] };
     readonly OndaLookup _spot = new() { Label = "Park yeri", DisplayMember = nameof(SpotOption.Display), ValueMember = nameof(SpotOption.SpotId), PopupWidth = 360, Placeholder = "Otomatik: en uygun boş yer", Icon = "" };
     readonly OndaComboBox _package = new() { Label = "Yıkama", Placeholder = "Yıkama yok" };
@@ -53,7 +53,7 @@ sealed class EntryForm : OndaForm
         _spot.Columns.Add(new OndaGridColumn(nameof(SpotOption.Code), "Yer", 80));
         _spot.Columns.Add(new OndaGridColumn(nameof(SpotOption.Zone), "Bölge", 70));
         _spot.Columns.Add(new OndaGridColumn(nameof(SpotOption.KindText), "Tür", 120));
-        _plate.ValidateValue += (_, e) => { if (!string.IsNullOrWhiteSpace(e.Value) && !TurkishPlate.IsValid(e.Value)) e.Error = "Geçerli bir plaka girin (ör. 34 ABC 123)."; };
+        _plate.ValidateValue += (_, e) => { if (!string.IsNullOrWhiteSpace(e.Value) && !TurkishPlate.IsValid(e.Value)) e.Error = "Geçerli bir plaka girin (ör. 34 XWQ 123)."; };
         _plate.Leave += (_, _) => { if (TurkishPlate.Normalize(_plate.Text) is { } p) _plate.Text = p; };
 
         _info.MaximumSize = new Size(280, 0);
@@ -154,7 +154,7 @@ sealed class EntryForm : OndaForm
     /// <summary>Ekran görüntüsü için örnek değerler.</summary>
     public async Task FillSampleAsync()
     {
-        _plate.Text = "34 OND 2026";
+        _plate.Text = "34 XW 2026";
         await LoadSpotsAsync();
         FillPackages();
         if (_package.Items.Count > 2) _package.SelectedItem = _package.Items[2];

@@ -76,9 +76,9 @@ public sealed class OtoparkFlowTests : IAsyncLifetime
         var packages = (await Sender.SendAsync(new GetWashPackages())).Value;
         var outside = packages.First(p => p.Code == "DIS");
 
-        var entry = await Sender.SendAsync(new RegisterEntry("34 tst 001", VehicleClass.Car, WashPackageId: outside.Id));
+        var entry = await Sender.SendAsync(new RegisterEntry("34 qwx 001", VehicleClass.Car, WashPackageId: outside.Id));
         Assert.True(entry.IsSuccess, entry.ErrorMessage);
-        Assert.Equal("34 TST 001", entry.Value.Plate);
+        Assert.Equal("34 QWX 001", entry.Value.Plate);
         Assert.NotNull(entry.Value.WashOrderId);
 
         var tile = (await Sender.SendAsync(new GetLotBoard())).Value.Single(t => t.SessionId == entry.Value.SessionId);
@@ -114,8 +114,8 @@ public sealed class OtoparkFlowTests : IAsyncLifetime
     public async Task Same_Plate_Cannot_Enter_Twice_And_Invalid_Plate_Is_Rejected()
     {
         await EnsureFreeSpotAsync(VehicleClass.Car);
-        Assert.True((await Sender.SendAsync(new RegisterEntry("34 TST 002", VehicleClass.Car))).IsSuccess);
-        var again = await Sender.SendAsync(new RegisterEntry("34tst002", VehicleClass.Car));
+        Assert.True((await Sender.SendAsync(new RegisterEntry("34 QWX 002", VehicleClass.Car))).IsSuccess);
+        var again = await Sender.SendAsync(new RegisterEntry("34qwx002", VehicleClass.Car));
         Assert.True(again.IsFailure);
         Assert.Equal(ErrorCodes.Domain, again.Errors[0].Code);
         Assert.Contains("zaten içeride", again.Errors[0].Message);
@@ -129,7 +129,7 @@ public sealed class OtoparkFlowTests : IAsyncLifetime
     public async Task Large_Vehicle_Gets_A_Large_Spot_And_Busy_Spot_Cannot_Close()
     {
         await EnsureFreeSpotAsync(VehicleClass.Large);
-        var result = await Sender.SendAsync(new RegisterEntry("34 TST 003", VehicleClass.Large));
+        var result = await Sender.SendAsync(new RegisterEntry("34 QWX 003", VehicleClass.Large));
         Assert.True(result.IsSuccess, result.ErrorMessage);
         var entry = result.Value;
         Assert.StartsWith("C-", entry.SpotCode);
@@ -168,14 +168,14 @@ public sealed class OtoparkFlowTests : IAsyncLifetime
     public async Task Walk_In_Wash_Gets_An_Estimate()
     {
         var packages = (await Sender.SendAsync(new GetWashPackages())).Value;
-        var id = (await Sender.SendAsync(new CreateWashOrder("35 TST 77", VehicleClass.Car, packages.First(p => p.Code == "ICD").Id))).Value;
+        var id = (await Sender.SendAsync(new CreateWashOrder("35 QWX 77", VehicleClass.Car, packages.First(p => p.Code == "ICD").Id))).Value;
         var card = (await Sender.SendAsync(new GetWashBoard())).Value.Single(w => w.Id == id);
         Assert.False(card.InLot);
         Assert.Equal(450m, card.Price);
         Assert.True(card.EstimatedReady > _time.Now());
 
         Assert.True((await Sender.SendAsync(new CancelWash(id))).IsSuccess);
-        Assert.True((await Sender.SendAsync(new CreateWashOrder("35 TST 77", VehicleClass.Car, packages[0].Id))).IsSuccess);
+        Assert.True((await Sender.SendAsync(new CreateWashOrder("35 QWX 77", VehicleClass.Car, packages[0].Id))).IsSuccess);
     }
 
     [Fact]

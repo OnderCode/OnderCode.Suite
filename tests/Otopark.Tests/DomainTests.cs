@@ -49,19 +49,19 @@ public sealed class TariffTests
 public sealed class PlateTests
 {
     [Theory]
-    [InlineData("34abc123", "34 ABC 123")]
-    [InlineData("06-ab-1234", "06 AB 1234")]
+    [InlineData("34xwq123", "34 XWQ 123")]
+    [InlineData("06-xw-1234", "06 XW 1234")]
     [InlineData("34 i 1234", "34 I 1234")]
-    [InlineData(" 81 zzz 99 ", "81 ZZZ 99")]
+    [InlineData(" 81 xqq 99 ", "81 XQQ 99")]
     public void Normalizes_Common_Spellings(string input, string expected) => Assert.Equal(expected, TurkishPlate.Normalize(input));
 
     [Theory]
-    [InlineData("00 AB 123")]   // il kodu yok
-    [InlineData("82 AB 123")]
-    [InlineData("34 A 123")]    // tek harfe 4 rakam
-    [InlineData("34 ABCD 12")]
-    [InlineData("34 ABC 1234")] // üç harfe en çok 3 rakam
-    [InlineData("ABC 123")]
+    [InlineData("00 XW 123")]   // il kodu yok
+    [InlineData("82 XW 123")]
+    [InlineData("34 X 123")]    // tek harfe 4 rakam
+    [InlineData("34 XWQX 12")]
+    [InlineData("34 XWQ 1234")] // üç harfe en çok 3 rakam
+    [InlineData("XWQ 123")]
     [InlineData("")]
     public void Rejects_Invalid_Plates(string input) => Assert.False(TurkishPlate.IsValid(input));
 }
@@ -85,7 +85,7 @@ public sealed class SpotAndWashTests
     {
         var spot = new ParkingSpot("B-01", "B", SpotKind.Standard);
         spot.TakeOutOfService("Boya");
-        var ex = Assert.Throws<DomainException>(() => new ParkingSession("34 AB 123", VehicleClass.Car, spot, Now));
+        var ex = Assert.Throws<DomainException>(() => new ParkingSession("34 XW 123", VehicleClass.Car, spot, Now));
         Assert.Contains("kullanım dışı", ex.Message);
     }
 
@@ -93,7 +93,7 @@ public sealed class SpotAndWashTests
     public void Wash_Order_Follows_Its_Workflow()
     {
         var package = new WashPackage("DIS", "Dış yıkama", 20, 250m, 350m, 150m, 1);
-        var order = new WashOrder("34 AB 123", VehicleClass.Large, package, Now);
+        var order = new WashOrder("34 XW 123", VehicleClass.Large, package, Now);
         Assert.Equal(350m, order.Price);
 
         Assert.Equal(WashStatus.Washing, order.Advance(Now.AddMinutes(5), "Murat"));
@@ -109,15 +109,15 @@ public sealed class SpotAndWashTests
     public void Package_Not_For_Motorcycles_Is_Rejected()
     {
         var detail = new WashPackage("DET", "Detaylı temizlik", 120, 1200m, 1600m, 0m, 4);
-        Assert.Throws<DomainException>(() => new WashOrder("34 AB 123", VehicleClass.Motorcycle, detail, Now));
+        Assert.Throws<DomainException>(() => new WashOrder("34 XW 123", VehicleClass.Motorcycle, detail, Now));
     }
 
     [Fact]
     public void Session_Closes_Once_With_Fixed_Fee()
     {
         var spot = new ParkingSpot("A-05", "A", SpotKind.Standard);
-        var s = new ParkingSession("34abc123", VehicleClass.Car, spot, Now);
-        Assert.Equal("34 ABC 123", s.Plate);
+        var s = new ParkingSession("34xwq123", VehicleClass.Car, spot, Now);
+        Assert.Equal("34 XWQ 123", s.Plate);
         var fee = s.Close(Now.AddMinutes(100), PaymentMethod.Card, washFee: 0m, washed: false);
         Assert.Equal(100m, fee.Total);
         Assert.Equal(100m, s.Total);
@@ -127,7 +127,7 @@ public sealed class SpotAndWashTests
     [Fact]
     public void Subscription_Covers_Its_Months()
     {
-        var sub = new Subscription("34 AB 123", "Test Abone", VehicleClass.Car, new DateOnly(2026, 11, 1), 2, 3000m);
+        var sub = new Subscription("34 XW 123", "Test Abone", VehicleClass.Car, new DateOnly(2026, 11, 1), 2, 3000m);
         Assert.Equal(new DateOnly(2026, 12, 31), sub.EndDate);
         Assert.True(sub.IsActiveOn(new DateOnly(2026, 12, 31)));
         Assert.False(sub.IsActiveOn(new DateOnly(2027, 1, 1)));

@@ -23,7 +23,7 @@ Ekranlar: gösterge paneli, otopark haritası, araç hareketleri,
 yıkama kuyruğu, abonelikler ve raporlar (gelir, yoğunluk saatleri,
 ciro tahmini; Excel, PDF ve CSV çıktısı).
 
-Kaynak kod (MIT lisansı): github.com/abdOnderDotNet/OnderCode.Suite
+Kaynak kod (MIT lisansı): github.com/OnderCode/OnderCode.Suite
 Web: ondercode.com
 
 Abdurrahman Önder

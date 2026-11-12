@@ -17,7 +17,7 @@ Ekranlar: gösterge paneli, oda haritası, rezervasyon çizelgesi,
 rezervasyonlar, misafirler, kat hizmetleri ve raporlar
 (Excel, PDF ve CSV çıktısı).
 
-Kaynak kod (MIT lisansı): github.com/abdOnderDotNet/OnderCode.Suite
+Kaynak kod (MIT lisansı): github.com/OnderCode/OnderCode.Suite
 Web: ondercode.com
 
 Abdurrahman Önder

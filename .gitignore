@@ -16,3 +16,8 @@ publish/
 yayin.log
 otopark-build.log
 docs/otopark/veri/
+eczane-build.log
+eczane-test.log
+eczane-test-full.log
+docs/eczane/veri/
+eczane-hepsi.bat

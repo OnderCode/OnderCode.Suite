@@ -23,7 +23,7 @@ OnderCode.Suite/
 │  └─ Apps/                      her uygulama 4 katman: Domain · Application · Infrastructure · WinForms
 │     ├─ Otel/                     OnderCode Otel ✔ hazır
 │     ├─ Otopark/                  OnderCode Otopark ✔ hazır (otopark + araç yıkama)
-│     ├─ Eczane/                   OnderCode Eczane (sırada)
+│     ├─ Eczane/                   OnderCode Eczane ✔ hazır (eczane ERP: satış, stok, depo, personel, nöbet, demirbaş)
 │     ├─ SiteYonetimi/             OnderCode Site Yönetimi
 │     ├─ Lojistik/                 OnderCode Lojistik
 │     └─ Personel/                 OnderCode Personel
@@ -32,7 +32,8 @@ OnderCode.Suite/
    ├─ OnderCode.Application.Tests   Dağıtıcı + hat + veri katmanı birlikte, uçtan uca
    ├─ OnderCode.Reporting.Tests     Pareto ve tahmin doğruluğu; Excel/PDF/CSV çıktılarının yapısı
    ├─ Otel.Tests                    Fiyat motoru, çakışma kuralı, KPI hesabı, raporlar, örnek veriyle uçtan uca akış
-   └─ Otopark.Tests                 Tarife motoru, plaka doğrulama, yıkama iş akışı, abonelik, raporlar, uçtan uca gişe akışı
+   ├─ Otopark.Tests                 Tarife motoru, plaka doğrulama, yıkama iş akışı, abonelik, raporlar, uçtan uca gişe akışı
+   └─ Eczane.Tests                  Katılım payı, reçete rengi, FEFO, MF, cari yaşlandırma, izin hakkı, nöbet dağıtımı, amortisman, uçtan uca akışlar
 ```
 
 Bağımlılık yönü tek taraflıdır: `WinForms → Infrastructure → Application → Domain → Kernel`.
@@ -195,6 +196,53 @@ Kısayollar: F2 araç girişi, F3 plaka ile çıkış ve tahsilat, F4 yıkama si
 </p>
 
 Çalıştırmak için `otopark-calistir.bat` ya da `dotnet run --project src/Apps/Otopark/Otopark.WinForms -c Release`. Örnek rapor çıktıları: [docs/otopark/ornek-raporlar](docs/otopark/ornek-raporlar).
+
+## OnderCode Eczane
+
+Bir eczanenin bütün işi tek uygulamada: reçeteli ve serbest satış, ilaç ve parti (SKT) takibi, ecza deposu siparişleri ve cari hesap, hasta geçmişi, reçetelerin geldiği kurumlar, personel ve izin, nöbet çizelgesi, demirbaş ve amortisman, SGK / özel sigorta faturaları, raporlar.
+
+**Kişisel veri tutmaz:** hasta, personel ve kurum kayıtlarında T.C. kimlik numarası, telefon ve adres alanı yoktur. İlk açılışta örnek veriyle gelir: yaklaşık 190 ilaç ve ürün, 1.100 hasta, 10 sağlık kurumu, 4 ecza deposu, 7 personel, 24 demirbaş, yıl başından bu yana nöbetler ve son dokuz haftanın satış, sipariş, ödeme ve faturaları. Bütün ilaç, hasta, kurum ve depo adları uydurmadır.
+
+| Ekran | Ne yapar |
+|---|---|
+| Gösterge paneli | Bugünkü ciro ve kâr, reçete / serbest satış sayısı, stok ve miad uyarıları, depo borcu ve kurum alacağı, sıradaki nöbet, izinliler, son 30 gün ciro, saatlik yoğunluk, en çok reçete gelen kurumlar |
+| Satış (POS) | Hasta, kurum, branş, reçete rengi ve numarası; barkod ya da adla ürün. Her değişiklikte FEFO parti seçimi, kurum payı ve hasta katılım payı anında hesaplanır |
+| Satışlar | Gün / hafta / ay, reçete ve serbest satış ayrımı, fiş ayrıntısı (hangi partiden düştüğü), iade |
+| İlaçlar ve stok | Stok, kritik seviye, kaç günlük stok kaldığı, en yakın SKT, marj; ürün kartı: partiler, stok hareketleri, depo alış fiyatları, 60 günlük satış grafiği |
+| Miad takibi | SKT geçmiş / 30 gün / 90 gün; satış hızına göre SKT'den önce satılamayacak kutu tahmini ve öneri; imha ve sayım |
+| Sipariş önerisi | Son 28 günlük satış hızı, en az stok, eldeki ve yoldaki miktar; her ürün için iskonto ve mal fazlasıyla toplamda en ucuz depo; seçilenler depo başına tek siparişe dönüşür |
+| Siparişler | Yoldaki ve teslim alınan siparişler; teslim almada parti no ve SKT girişi, stok partileri ve cari borç oluşur |
+| Ecza depoları | İskonto, vade, sefer sayısı, MF kampanyaları, zamanında teslim oranı; cari ekstre, vadesi geçen borç, ödeme (en eski vadeden kapatılır) |
+| Hastalar | Kurum, kronik rapor, reçete sayısı, son geliş; hasta geçmişi: düzenli ilaçlar, ortalama alım aralığı ve beklenen sonraki alım |
+| Hastaneler | Reçetelerin en çok hangi kurumdan geldiği, son 30 gün / önceki 30 gün, kurum başına ciro ve en sık branş |
+| Personel ve izin | Kıdem, yıllık izin hakkı (1-5 yıl 14, 5-15 yıl 20, 15+ yıl 26 iş günü), kullanılan / kalan izin, nöbet puanı, satış |
+| Nöbet çizelgesi | Ay takvimi; otomatik adil dağıtım (yıl boyu puan dengesi, iki nöbet arası en az 2 gün, izinliler atlanır), elle atama, nöbet günü ekleme |
+| Demirbaş | Doğrusal amortisman, net defter değeri, bu yılın gideri; bakım ve kalibrasyon takvimi, tamir, hurdaya ayırma |
+| Kurum faturaları | Ay sonu SGK ve özel sigorta faturaları, tahsilat takibi |
+| Raporlar | Satış, hastane (Pareto), ürün (ABC, yavaş dönen, stok devir hızı), ecza deposu, personel ve nöbet, ciro tahmini (Holt-Winters), demirbaş; Excel, PDF ve CSV |
+
+Kısayollar: F2 reçeteli satış, F3 serbest satış, F4 ilaç listesi, F1 hakkında.
+
+İş kuralları Domain katmanında ve testli:
+
+- **Katılım payı:** reçete başına ilk 3 kutu 3 ₺, sonraki her kutu 1 ₺ + geri ödemeli ilaçta çalışanlardan %20, emeklilerden %10; kronik raporlu hastadan yüzdelik pay alınmaz. Özel sigortada hasta %20 öder.
+- **Reçete rengi:** kırmızı ve yeşil reçeteli ilaçlar yalnız kendi renginde reçeteyle satılır; reçeteli ilaç serbest satışta satılamaz. Reçete geçerliliği beyaz reçetede 5, renkli reçetede 2 gün.
+- **FEFO:** satış SKT'si en yakın partiden düşer; SKT'si geçmiş parti satılamaz. Serbest satışta indirim en çok %15.
+- **Mal fazlası (MF):** kampanya eşiğine yuvarlama yalnız %30'dan fazla kutu eklemiyorsa yapılır; MF'li alımda birim maliyet bedelsiz kutularla bölünür.
+- **Barkod:** EAN-13 kontrol hanesi doğrulanır.
+- **İzin:** çakışan izin girilemez, yıllık izin hakkı aşılamaz; izin günlerindeki nöbetler boşaltılır.
+- **Nöbet:** yalnız eczacı nöbetçi olabilir; gece 1, pazar 2, bayram 3 puan.
+
+<p>
+<img src="docs/eczane/01-gosterge-paneli.png" width="49%">
+<img src="docs/eczane/02-receteli-satis.png" width="49%">
+<img src="docs/eczane/04-ilaclar-stok.png" width="49%">
+<img src="docs/eczane/07-siparis-onerisi.png" width="49%">
+<img src="docs/eczane/13-nobet-cizelgesi.png" width="49%">
+<img src="docs/eczane/17-rapor-hastaneler.png" width="49%">
+</p>
+
+Çalıştırmak için `eczane-calistir.bat` ya da `dotnet run --project src/Apps/Eczane/Eczane.WinForms -c Release`. Örnek rapor çıktıları: [docs/eczane/ornek-raporlar](docs/eczane/ornek-raporlar).
 
 ## Raporlama ve analiz
 

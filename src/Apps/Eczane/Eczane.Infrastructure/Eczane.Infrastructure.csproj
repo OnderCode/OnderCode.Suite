@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Eczane veri erişimi: EF Core + SQLite bağlamı, eşlemeler, örnek veri. -->
+  <PropertyGroup>
+    <RootNamespace>Eczane.Infrastructure</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Eczane.Application\Eczane.Application.csproj" />
+    <ProjectReference Include="..\..\..\Shared\OnderCode.Data\OnderCode.Data.csproj" />
+  </ItemGroup>
+</Project>

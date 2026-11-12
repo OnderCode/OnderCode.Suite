@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Eczane alan modeli: personel, izin, nöbet, demirbaş, ürün, parti/SKT, ecza deposu siparişi, hasta, reçete, satış. Altyapıdan bağımsız. -->
+  <PropertyGroup>
+    <RootNamespace>Eczane.Domain</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Shared\OnderCode.Kernel\OnderCode.Kernel.csproj" />
+  </ItemGroup>
+</Project>

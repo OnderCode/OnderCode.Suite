@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Eczane kullanım senaryoları: satış ve reçete, stok/SKT, depo siparişi ve cari, hasta, hastane analizi, personel, nöbet, demirbaş, raporlar. -->
+  <PropertyGroup>
+    <RootNamespace>Eczane.Application</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Eczane.Domain\Eczane.Domain.csproj" />
+    <ProjectReference Include="..\..\..\Shared\OnderCode.Application\OnderCode.Application.csproj" />
+    <ProjectReference Include="..\..\..\Shared\OnderCode.Analytics\OnderCode.Analytics.csproj" />
+  </ItemGroup>
+</Project>

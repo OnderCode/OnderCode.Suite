@@ -1,0 +1,46 @@
+OnderCode Eczane
+================
+
+Eczane yönetim sistemi (ERP): satış, stok, depo, personel, nöbet, demirbaş.
+Kurulum gerekmez. OnderCodeEczane.exe dosyasını çalıştırın.
+Windows 10 / 11 (64 bit). .NET kurulu olması gerekmez.
+
+Kişisel veri tutmaz: T.C. kimlik numarası, telefon ve adres alanı yoktur.
+
+İlk açılışta örnek veriyle dolu bir veritabanı oluşturulur:
+yaklaşık 190 ilaç ve ürün, 1100 hasta, 10 sağlık kurumu, 4 ecza deposu,
+7 personel, 24 demirbaş ve son dokuz haftanın satış, sipariş ve nöbetleri.
+Örnek verideki bütün ilaç, hasta, kurum ve depo adları uydurmadır.
+
+Kısayollar: F2 reçeteli satış, F3 serbest satış, F4 ilaç listesi.
+
+Ekranlar:
+- Gösterge paneli: günlük ciro ve kâr, reçete sayısı, stok ve miad
+  uyarıları, depo borcu, nöbet, en çok reçete gelen kurumlar
+- Satış (POS): barkodla ürün, FEFO ile parti seçimi, katılım payı ve
+  kurum payı, reçete rengi kuralları, iade
+- İlaçlar ve stok, ürün kartı (partiler, hareketler, depo fiyatları)
+- Miad takibi: SKT geçmiş / kritik / izlemede, satış hızına göre
+  elde kalacak kutu tahmini, imha ve sayım
+- Sipariş önerisi: satış hızı ve en az stoka göre miktar, iskonto ve
+  mal fazlasına göre en uygun depo; tek tıkla depo siparişleri
+- Siparişler ve teslim alma (parti no, SKT), ecza depoları ve cari
+  ekstre, vade ve ödeme
+- Hastalar ve hasta geçmişi (düzenli ilaçlar, beklenen sonraki alım)
+- Hastaneler: reçetelerin en çok hangi kurumdan geldiği, branşlar
+- Personel ve izin (kıdeme göre yıllık izin hakkı)
+- Nöbet çizelgesi: takvim, puan dengesine göre otomatik planlama
+- Demirbaş: doğrusal amortisman, bakım ve kalibrasyon takvimi
+- Kurum faturaları: SGK ve özel sigorta, tahsilat
+- Raporlar: satış, hastane, ürün (ABC), ecza deposu, personel ve
+  nöbet, ciro tahmini, demirbaş; Excel, PDF ve CSV çıktısı
+
+Veritabanı: %LocalAppData%\OnderCode\Eczane\Eczane.db
+Silerseniz uygulama bir sonraki açılışta örnek veriyle yeniden oluşturur.
+Exe'nin yanına "portable" adında boş bir dosya koyarsanız veritabanı
+exe'nin yanındaki Data klasöründe tutulur.
+
+Kaynak kod (MIT lisansı): github.com/OnderCode/OnderCode.Suite
+Web: ondercode.com
+
+Abdurrahman Önder

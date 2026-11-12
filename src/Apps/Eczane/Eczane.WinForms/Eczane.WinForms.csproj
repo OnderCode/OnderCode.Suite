@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- OnderCode Eczane: eczane ERP masaüstü arayüzü. Onda bileşenleri. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationHighDpiMode>SystemAware</ApplicationHighDpiMode>
+    <RootNamespace>Eczane.WinForms</RootNamespace>
+    <AssemblyName>OnderCodeEczane</AssemblyName>
+    <Product>OnderCode Eczane</Product>
+    <AssemblyTitle>OnderCode Eczane</AssemblyTitle>
+    <NoWarn>$(NoWarn);WFO1000</NoWarn>
+    <UseOnda>true</UseOnda>
+  </PropertyGroup>
+  <ItemGroup>
+    <Using Include="OnderCode.WinForms" />
+    <Using Include="Eczane.Application" />
+    <Using Include="Eczane.Domain" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Eczane.Infrastructure\Eczane.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\Shared\OnderCode.WinForms\OnderCode.WinForms.csproj" />
+  </ItemGroup>
+</Project>

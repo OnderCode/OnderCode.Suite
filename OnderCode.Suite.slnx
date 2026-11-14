@@ -39,6 +39,11 @@
     <Project Path="src/Apps/Sinema/Sinema.Infrastructure/Sinema.Infrastructure.csproj" />
     <Project Path="src/Apps/Sinema/Sinema.Web/Sinema.Web.csproj" />
   </Folder>
+  <Folder Name="/src/Apps/Donanim/">
+    <Project Path="src/Apps/Donanim/Donanim.Core/Donanim.Core.csproj" />
+    <Project Path="src/Apps/Donanim/Donanim.Windows/Donanim.Windows.csproj" />
+    <Project Path="src/Apps/Donanim/Donanim.WinForms/Donanim.WinForms.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/OnderCode.Data.Tests/OnderCode.Data.Tests.csproj" />
     <Project Path="tests/OnderCode.Application.Tests/OnderCode.Application.Tests.csproj" />
@@ -47,5 +52,6 @@
     <Project Path="tests/Otopark.Tests/Otopark.Tests.csproj" />
     <Project Path="tests/Eczane.Tests/Eczane.Tests.csproj" />
     <Project Path="tests/Sinema.Tests/Sinema.Tests.csproj" />
+    <Project Path="tests/Donanim.Tests/Donanim.Tests.csproj" />
   </Folder>
 </Solution>

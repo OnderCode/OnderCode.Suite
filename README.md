@@ -25,6 +25,7 @@ OnderCode.Suite/
 │     ├─ Otopark/                  OnderCode Otopark ✔ hazır (otopark + araç yıkama)
 │     ├─ Eczane/                   OnderCode Eczane ✔ hazır (eczane ERP: satış, stok, depo, personel, nöbet, demirbaş)
 │     ├─ Sinema/                   OnderCode Sinema ✔ hazır (web: salon tasarımı, seans, gişe, online bilet, QR, kapı, büfe)
+│     ├─ Donanim/                  OnderCode Donanım ✔ hazır (bilgisayarın donanım karnesi: RAM yuvaları, disk, pil, öneriler)
 │     ├─ SiteYonetimi/             OnderCode Site Yönetimi
 │     ├─ Lojistik/                 OnderCode Lojistik
 │     └─ Personel/                 OnderCode Personel
@@ -244,6 +245,46 @@ Kısayollar: F2 reçeteli satış, F3 serbest satış, F4 ilaç listesi, F1 hakk
 </p>
 
 Çalıştırmak için `eczane-calistir.bat` ya da `dotnet run --project src/Apps/Eczane/Eczane.WinForms -c Release`. Örnek rapor çıktıları: [docs/eczane/ornek-raporlar](docs/eczane/ornek-raporlar).
+
+## OnderCode Donanım
+
+Bilgisayarın **donanım karnesi**: işlemci, anakart ve BIOS, bellek yuvaları, diskler, ekran kartı ve ekranlar, pil, Windows ve güvenlik ayarları tek uygulamada.
+Her bileşene okul karnesi gibi 1–5 not verir (Zayıf … Pekiyi) ve asıl soruyu cevaplar: **"Bu bilgisayara ne alınır?"**
+Arayüz baştan sona [Onda](https://ondercode.com/projeler/onda) bileşenleriyle yazıldı; bellek yuvaları ve anakart çizimi de birer Onda kontrolü.
+
+| Ekran | Ne gösterir |
+|---|---|
+| Karne | Bilgisayarın özeti, genel ortalama halkası, altı bileşenin notu ve gerekçesi, öncelikli öneriler, alışveriş listesi |
+| Bellek (RAM) | Anakart üzerinde yuvaların çizimi: dolu yuvada modül (boyut, tür, hız), boş yuvada kesik çizgi. Yuvanın üzerine gelince ayrıntı; toplam, dolu yuva, anakartın en fazla desteklediği bellek, çalışma hızı, tek/çift kanal, anlık kullanım |
+| İşlemci ve anakart | Çekirdek / iş parçacığı, saat hızı, önbellek, sanallaştırma, anakart ve BIOS tarihi; canlı işlemci ve bellek grafiği |
+| Depolama | NVMe / SATA SSD / HDD ayrımı, sağlık, sıcaklık ve çalışma saati (yönetici olarak açılırsa), bölümlerin doluluğu |
+| Ekran kartı ve ekran | Tümleşik / harici, gerçek video belleği (WMI'nın 4 GB sınırına takılmadan), sürücü tarihi, bağlı ekranlar ve boyutları |
+| Pil ve sistem | Pil sağlığı (fabrika kapasitesine göre), şarj döngüsü; Windows sürümü ve destek durumu, açık kalma süresi, UEFI, Güvenli Önyükleme, TPM, ağ bağdaştırıcıları |
+| Öneriler ve rapor | Bütün öneriler ve kazanımları, alışveriş listesi, **PDF / Excel karne**, ikinci el ilanı için hazır metin |
+
+Öneriler somuttur ve testlerle doğrulanır:
+
+- **Bellek:** "Boş yuvaya 8 GB DDR4-2666 SO-DIMM takın": tek modülle tek kanalda çalışan belleği çift kanala geçirir. Bütün yuvalar doluysa daha büyük kit, anakartın sınırı aşılmaz; lehimli bellekte ekleme önerilmez.
+- **XMP/EXPO:** modül 3600 MT/s için üretilmiş ama 2133'te çalışıyorsa (masaüstünde) BIOS ayarı önerilir; para gerektirmez.
+- **Disk:** Windows sabit diskteyse SSD'ye geçiş, dolmak üzere olan bölüm, sağlığı bozulan diskte acil yedek.
+- **Pil, Windows, güvenlik:** yıpranmış pil, desteği biten Windows 10, kapalı Güvenli Önyükleme, eski TPM, günlerdir yeniden başlatılmayan sistem.
+
+Bilgiler Windows'un WMI arayüzünden ve kayıt defterinden okunur (System.Management, MIT). **Uygulama internete bağlanmaz; seri numarası, MAC adresi ve kullanıcı bilgisi okumaz.** Okunamayan bölümler (ör. yönetici izni isteyen disk sıcaklığı) taramayı durdurmaz, "Tarama notları"nda yazar.
+
+Ekran görüntülerinde ve tanıtım videosunda iki **kurgusal** örnek bilgisayar kullanılır (marka ve model adları uydurmadır); uygulamada da "Örnek" seçenekleriyle açılabilirler.
+
+<p>
+<img src="docs/donanim/01-karne.png" width="49%">
+<img src="docs/donanim/02-bellek-dizustu.png" width="49%">
+<img src="docs/donanim/07-bellek-oyun.png" width="49%">
+<img src="docs/donanim/05-oneriler.png" width="49%">
+<img src="docs/donanim/08-islemci-anakart.png" width="49%">
+<img src="docs/donanim/03-depolama.png" width="49%">
+<img src="docs/donanim/04-pil-sistem.png" width="49%">
+<img src="docs/donanim/10-koyu-karne.png" width="49%">
+</p>
+
+Çalıştırmak için `donanim-calistir.bat` ya da `dotnet run --project src/Apps/Donanim/Donanim.WinForms`. Kurulumsuz Windows paketi: [ondercode.com/projeler/ondercode-donanim](https://ondercode.com/projeler/ondercode-donanim).
 
 ## OnderCode Sinema
 

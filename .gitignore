@@ -26,3 +26,4 @@ docs/sinema/raw-*/
 App_Data/
 src/Apps/Sinema/Sinema.Web/wwwroot/uploads/*
 !src/Apps/Sinema/Sinema.Web/wwwroot/uploads/.gitkeep
+docs/donanim/raw/

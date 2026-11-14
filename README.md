@@ -1,6 +1,6 @@
 # OnderCode Suite
 
-.NET 10 + WinForms ile yazılmış, açık kaynak, uçtan uca çalışan otomasyon uygulamaları ve onların ortak altyapısı.
+.NET 10 + WinForms ve Blazor ile yazılmış, açık kaynak, uçtan uca çalışan otomasyon uygulamaları ve onların ortak altyapısı.
 Kurulum gerektirmez: SQL Server yok, bağlantı ayarı yok. Uygulama ilk açılışta veritabanını oluşturur, migration'ları uygular ve örnek veriyi yükler.
 
 **Lisans:** MIT. Ücretli ya da gelir sınırlı lisans isteyen hiçbir paket kullanılmaz.
@@ -20,10 +20,11 @@ OnderCode.Suite/
 │  │  ├─ OnderCode.Analytics     Bağımlılıksız analiz: Pareto/ABC, doğrusal trend, Holt, Holt-Winters
 │  │  ├─ OnderCode.Reporting     Rapor modeli; Excel (kendi yazıcımız), PDF (PDFsharp), CSV
 │  │  └─ OnderCode.WinForms      Uygulamaların ortak arayüz parçaları: sayfa tabanı, rapor kaydetme, ekran görüntüsü
-│  └─ Apps/                      her uygulama 4 katman: Domain · Application · Infrastructure · WinForms
+│  └─ Apps/                      her uygulama 4 katman: Domain · Application · Infrastructure · arayüz (WinForms / Web)
 │     ├─ Otel/                     OnderCode Otel ✔ hazır
 │     ├─ Otopark/                  OnderCode Otopark ✔ hazır (otopark + araç yıkama)
 │     ├─ Eczane/                   OnderCode Eczane ✔ hazır (eczane ERP: satış, stok, depo, personel, nöbet, demirbaş)
+│     ├─ Sinema/                   OnderCode Sinema ✔ hazır (web: salon tasarımı, seans, gişe, online bilet, QR, kapı, büfe)
 │     ├─ SiteYonetimi/             OnderCode Site Yönetimi
 │     ├─ Lojistik/                 OnderCode Lojistik
 │     └─ Personel/                 OnderCode Personel
@@ -243,6 +244,51 @@ Kısayollar: F2 reçeteli satış, F3 serbest satış, F4 ilaç listesi, F1 hakk
 </p>
 
 Çalıştırmak için `eczane-calistir.bat` ya da `dotnet run --project src/Apps/Eczane/Eczane.WinForms -c Release`. Örnek rapor çıktıları: [docs/eczane/ornek-raporlar](docs/eczane/ornek-raporlar).
+
+## OnderCode Sinema
+
+Bir sinemanın sıfırdan bilet kesimine kadar bütün işi, **web** üzerinde: salon ve koltuk planı tasarımı, film ve afiş, seans planı, fiyat kuralları, gişe satışı, müşteri sitesinden online koltuk seçimi, QR kodlu e-bilet, kapıda bilet okutma, büfe, personel ve raporlar.
+Arayüz, Onda'nın web sürümü **[Onda.Web](https://ondercode.com/projeler/onda)** bileşenleriyle (Blazor, sunucu tarafı) yazıldı; alt katmanlar diğer uygulamalarla aynı ortak çekirdeği kullanır.
+
+İlk açılışta örnek veriyle gelir: 12 film (2'si yakında), 6 salon (biri VIP), 4 bilet türü, 13 büfe ürünü, 8 personel ve son üç haftanın seans, satış, kapı girişi ve iadeleri. **Bütün filmler, afişler ve kişiler uydurmadır**; afişler bu proje için sıfırdan çizildi. Ödeme alınmaz (demo ödeme).
+
+| Ekran | Ne yapar |
+|---|---|
+| Müşteri sitesi | Vizyondaki filmler ve 7 günlük seans programı, film sayfası, yakında gelecekler. Online satışı kapanmış seanslar görünür ama seçilemez |
+| Koltuk seçimi | Canlı koltuk planı: seçilen koltuk 5 dakika size ayrılır, başka ekranlarda anında "başkasının sepetinde" görünür; geri sayım, bilet türü, demo ödeme |
+| E-bilet | QR kodlu bilet (QR yalnız satış kodunu içerir), yazdır / PDF; "Biletim" sayfasından kodla tekrar açılır |
+| Gösterge | Bugünkü bilet, ciro, doluluk, büfe; dünle karşılaştırma, 14 günlük ciro, şu an oynayan seanslar ve içerideki seyirci, haftanın filmleri |
+| Filmler | Afiş yükleme (JPG/PNG/WebP, içerik imzası kontrol edilir), tür, süre, yaş sınırı, vizyon durumu, öne çıkan film |
+| Salonlar ve tasarımcı | Sürükle-boya koltuk tasarımcısı: standart, VIP, çift (sevgili) koltuk, engelli yeri, koridor; tek tıkla sıra/sütun doldurma, hazır şablonlar. Satılmış koltuğu silen değişiklik engellenir |
+| Seanslar | Salon × saat zaman çizelgesi; reklam ve temizlik süresi hesaba katılır, çakışan seans açılamaz, ilk boş saat önerilir, birkaç güne birden seans; iptal edilen seansın satışları iade edilir |
+| Fiyatlar | Bilet türleri (tam, öğrenci, çocuk, 65+), VIP / çift koltuk ve 3D farkı, halk günü ve matine indirimi; örnek fiyat tablosu |
+| Gişe | Seans listesi, koltuk planı, bilet türü, büfe ürünleri, nakit/kart; aynı koltuk iki kez satılamaz |
+| Kapı kontrol | QR okuyucu klavye gibi çalışır; kapı açılma saati, biten / iptal seans, iade edilmiş ya da ikinci kez okutulan bilet uyarıları, belge gerektiren bilet türü uyarısı |
+| Satışlar, büfe, personel | Satış listesi ve iade, büfe ürünleri ve kategori payı, görev ve vardiya; her listede arama ve Excel |
+| Raporlar | Günlük ciro, film ve salon performansı, bilet türleri, gişe/online payı, ödeme dağılımı, gün × saat yoğunluk haritası |
+
+Yetkiler göreve göre: **yönetici** her şeyi, **gişe** gişe ekranı ve satışları, **kapı görevlisi** kapı kontrolünü görür. Demo girişinde parola yoktur, personel kartı seçilir.
+
+İş kuralları Domain katmanında ve testli:
+
+- **Seans:** bitiş = başlangıç + reklam + film süresi; salon temizlik süresi sonunda hazır olur. Aynı salonda çakışan seans açılamaz; 3D seans yalnız 3D salonda.
+- **Fiyat:** halk günü (%40) ve matine indiriminden büyük olan uygulanır; sonra koltuk (VIP, çift) ve 3D farkı eklenir.
+- **Koltuk:** bir seansta bir koltuk yalnız bir kez satılır (veritabanında iade edilmeyen biletler için süzgeçli benzersiz indeks); iade edilen koltuk yeniden satılabilir. Online satış seanstan 15 dakika önce kapanır.
+- **Kapı:** bilet seanstan 45 dakika önce okutulabilir; kullanılmış bilet iade edilemez, aynı bilet ikinci kez kullanılamaz.
+- **Bilet kodu:** karışan harfler (O/0, I/1) olmadan 8 karakter, `ABCD-2345`; boşluk, tire ve küçük harf fark etmez.
+
+<p>
+<img src="docs/sinema/01-vizyon.png" width="49%">
+<img src="docs/sinema/03-koltuk.png" width="49%">
+<img src="docs/sinema/04-ebilet.png" width="49%">
+<img src="docs/sinema/06-gosterge.png" width="49%">
+<img src="docs/sinema/09-salon-tasarim.png" width="49%">
+<img src="docs/sinema/10-seanslar.png" width="49%">
+<img src="docs/sinema/17-gise.png" width="49%">
+<img src="docs/sinema/19-gosterge-koyu.png" width="49%">
+</p>
+
+Çalıştırmak için `sinema-calistir.bat` ya da `dotnet run --project src/Apps/Sinema/Sinema.Web` → http://localhost:5280. Onda.Web projesi yan klasörde (`..\Onda`) bulunursa kaynaktan, yoksa `lib\Onda\Onda.Web.dll` üzerinden derlenir. Kurulumsuz Windows paketi: [ondercode.com/projeler/ondercode-sinema](https://ondercode.com/projeler/ondercode-sinema).
 
 ## Raporlama ve analiz
 

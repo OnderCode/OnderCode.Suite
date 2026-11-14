@@ -1,0 +1,253 @@
+@page "/gise"
+@layout StaffLayout
+@attribute [Authorize(Roles = Roles.BoxOffice)]
+@implements IDisposable
+@inject ISender Sender
+@inject SeatHoldService Holds
+@inject Visitor Me
+@inject CurrentStaff Staff
+@inject OndaToastService Toast
+@inject TimeProvider Time
+<PageHeader Title="Gişe" Subtitle="@($"{_staffName} · {DateOnly.FromDateTime(_now).ToString("d MMMM dddd", Texts.Turkish)}")">
+    <Actions>
+        <OndaSegmented Items="_dayOptions" Value="_dayOffset" ValueChanged="@(async (int v) => { _dayOffset = v; await LoadSessionsAsync(); })" />
+    </Actions>
+</PageHeader>
+
+<div class="pos">
+    <div class="o-card pos-sessions">
+        <div class="o-card-body" style="padding-bottom:8px"><OndaTextBox Kind="OndaInputKind.Search" Placeholder="Film ya da salon" @bind-Value="_filter" /></div>
+        <div class="pos-session-list">
+            @foreach (var s in VisibleSessions)
+            {
+                var sess = s;
+                <button class="pos-session @(_sessionId == s.Id ? "on" : "") @(s.Start < _now ? "started" : "")" style="--accent:@s.Accent" @onclick="() => SelectAsync(sess.Id)">
+                    <span class="t">@s.Start.ToString("HH:mm")</span>
+                    <span class="m"><b>@s.FilmTitle</b><small>@s.HallName · @s.FormatText @s.LanguageText</small></span>
+                    <span class="f @(s.Free == 0 ? "full" : s.Occupancy > .8 ? "hot" : "")">@(s.Free == 0 ? "Dolu" : $"{s.Free} boş")</span>
+                </button>
+            }
+            @if (!VisibleSessions.Any()) { <OndaEmpty Icon="calendar-remove-outline" Title="Seans yok" /> }
+        </div>
+    </div>
+
+    <div class="o-card pos-map">
+        @if (_map is { } m)
+        {
+            <div class="pos-map-head" style="--accent:@m.Session.Accent">
+                <Poster Src="@m.Session.PosterUrl" Class="mini" />
+                <div style="min-width:0;flex:1">
+                    <div class="o-row" style="gap:8px"><b style="font-size:16px">@m.Session.FilmTitle</b><RatingBadge Rating="m.Session.Rating" /></div>
+                    <div class="o-small o-muted">@m.Session.Start.ToString("HH:mm")–@m.Session.End.ToString("HH:mm") · @m.Session.HallName · @m.Session.FormatText · @Texts.Of(m.Session.Language)</div>
+                </div>
+                <div class="o-right"><b>@m.SoldSeats.Count/@m.Session.Capacity</b><div class="o-small o-muted">satıldı</div></div>
+            </div>
+            <div class="pos-map-body" data-theme="dark">
+                <SeatMap Layout="_layout" Sold="m.SoldSeats" Used="m.UsedSeats" Holds="_holds" Holder="@HolderId" OnSeatClick="Toggle" ReadOnly="@m.Session.IsCancelled" />
+            </div>
+        }
+        else
+        {
+            <OndaEmpty Icon="seat-outline" Title="Seans seçin" Text="Soldaki listeden bir seans seçin. Yalnızca büfe satışı için sağdaki ürünleri kullanabilirsiniz." />
+        }
+    </div>
+
+    <div class="o-card pos-cart">
+        <div class="o-card-body o-col" style="gap:10px">
+            <div class="o-row" style="justify-content:space-between"><div class="o-card-title">Sepet</div><OndaButton Text="Temizle" Icon="broom" Kind="OndaButtonKind.Ghost" Size="OndaSize.Small" OnClick="Clear" Disabled="@(Mine.Count == 0 && _items.Count == 0)" /></div>
+            @foreach (var seat in Mine)
+            {
+                var code = seat.Code;
+                var typeId = _types.GetValueOrDefault(code, DefaultType);
+                var q = Quote(typeId, seat.Type);
+                <div class="cart-line">
+                    <span class="seat-code">@(code)</span>
+                    <div style="flex:1;min-width:0">
+                        <div class="type-pills">
+                            @foreach (var t in TypeChoices)
+                            {
+                                var tid = t.TicketTypeId;
+                                <button class="type-pill @(tid == typeId ? "on" : "")" @onclick="() => _types[code] = tid">@t.Name</button>
+                            }
+                        </div>
+                        <div class="o-small o-muted">@Texts.Of(seat.Type)@(q?.Quote.DiscountReason is { } why ? " · " + why : "")@(TypeChoices.FirstOrDefault(t => t.TicketTypeId == typeId)?.RequiresProof == true ? " · belge kontrol" : "")</div>
+                    </div>
+                    <b>@Texts.MoneyShort(q?.Quote.Total ?? 0)</b>
+                </div>
+            }
+            @foreach (var (id, qty) in _items.ToList())
+            {
+                var item = _menu.FirstOrDefault(x => x.Id == id);
+                if (item is null) continue;
+                var itemId = id;
+                <div class="cart-line">
+                    <span class="seat-code alt"><OndaIcon Name="popcorn" /></span>
+                    <div style="flex:1;min-width:0"><b>@item.Name</b><div class="o-small o-muted">@Texts.MoneyShort(item.Price) × @qty</div></div>
+                    <OndaButton Icon="minus" Kind="OndaButtonKind.Ghost" Size="OndaSize.Small" OnClick="() => AddItem(itemId, -1)" />
+                    <b>@Texts.MoneyShort(item.Price * qty)</b>
+                </div>
+            }
+            @if (Mine.Count == 0 && _items.Count == 0) { <div class="o-muted o-small">Koltuk ya da büfe ürünü ekleyin.</div> }
+
+            <div class="o-section-title" style="margin-top:6px">Büfe</div>
+            <OndaSegmented Items="_catOptions" @bind-Value="_cat" Block="true" />
+            <div class="menu-grid">
+                @foreach (var i in _menu.Where(x => x.Category == _cat))
+                {
+                    var itemId = i.Id;
+                    <button class="menu-btn" @onclick="() => AddItem(itemId, 1)"><b>@i.Name</b><small>@Texts.MoneyShort(i.Price)</small></button>
+                }
+            </div>
+            <hr class="o-divider" />
+            <div class="o-row" style="justify-content:space-between"><span>Toplam</span><b class="total">@Texts.Money(Total)</b></div>
+            <OndaSegmented Items="_payOptions" @bind-Value="_pay" Block="true" />
+            <OndaButton Text="Satışı tamamla" Icon="check-bold" Kind="OndaButtonKind.Success" Size="OndaSize.Large" Block="true" Busy="_busy" Disabled="@(Mine.Count == 0 && _items.Count == 0)" OnClick="SellAsync" />
+        </div>
+    </div>
+</div>
+
+<OndaModal Open="@(_done is not null)" OpenChanged="@(o => { if (!o) _done = null; })" Title="Satış tamamlandı" Icon="check-circle" Size="sm">
+    <ChildContent>
+        @if (_done is { } d)
+        {
+            <div class="o-col" style="align-items:center;text-align:center">
+                @if (d.Tickets.Count > 0) { <img src="@($"qr/{d.Code}")" width="150" height="150" alt="QR" style="border-radius:10px;background:#fff;padding:6px" /> }
+                <div class="o-mono" style="font-size:22px;font-weight:700">@d.Code</div>
+                <div class="o-muted">@(d.FilmTitle is null ? "Büfe satışı" : $"{d.FilmTitle} · {d.HallName} {d.Start:HH:mm} · {d.Seats}")</div>
+                <div style="font-size:20px;font-weight:600">@Texts.Money(d.Total) · @Texts.Of(d.Payment)</div>
+            </div>
+        }
+    </ChildContent>
+    <Footer>
+        <OndaButton Text="Bileti yazdır" Icon="printer-outline" Kind="OndaButtonKind.Outline" Href="@($"/bilet/{_done?.Code}")" Target="_blank" />
+        <OndaButton Text="Yeni satış" Icon="plus" Kind="OndaButtonKind.Primary" OnClick="() => _done = null" />
+    </Footer>
+</OndaModal>
+
+@code {
+    [SupplyParameterFromQuery(Name = "seans")] public int? SessionParam { get; set; }
+
+    DateTime _now;
+    int _dayOffset;
+    string? _filter, _staffName;
+    int? _staffId, _sessionId;
+    IReadOnlyList<SessionRow> _sessions = [];
+    SeatMapView? _map;
+    HallLayout _layout = HallLayout.Grid(3, 5);
+    IReadOnlyList<SeatHold> _holds = [];
+    IReadOnlyList<QuoteRow> _quotes = [];
+    IReadOnlyList<ConcessionRow> _menu = [];
+    readonly Dictionary<string, int> _types = new(StringComparer.OrdinalIgnoreCase);
+    readonly Dictionary<int, int> _items = [];
+    ConcessionCategory _cat = ConcessionCategory.Menu;
+    PaymentMethod _pay = PaymentMethod.Card;
+    bool _busy;
+    OrderView? _done;
+
+    readonly IReadOnlyList<OndaOption<int>> _dayOptions = [new(0, "Bugün"), new(1, "Yarın")];
+    readonly IReadOnlyList<OndaOption<PaymentMethod>> _payOptions = [new(PaymentMethod.Card, "Kart", "credit-card-outline"), new(PaymentMethod.Cash, "Nakit", "cash")];
+    readonly IReadOnlyList<OndaOption<ConcessionCategory>> _catOptions = Enum.GetValues<ConcessionCategory>().Reverse().Select(c => new OndaOption<ConcessionCategory>(c, Texts.Of(c))).ToList();
+
+    string HolderId => "gise-" + Me.Id;
+
+    IEnumerable<SessionRow> VisibleSessions => _sessions.Where(s => s.End > _now && (string.IsNullOrWhiteSpace(_filter)
+        || s.FilmTitle.Contains(_filter, StringComparison.CurrentCultureIgnoreCase) || s.HallName.Contains(_filter, StringComparison.CurrentCultureIgnoreCase)));
+
+    List<SeatInfo> Mine => _holds.Where(h => h.HolderId == HolderId).Select(h => _layout.Find(h.SeatCode)).OfType<SeatInfo>().OrderBy(x => x.Row).ThenBy(x => x.Number).ToList();
+
+    IEnumerable<QuoteRow> TypeChoices => _quotes.Where(q => q.Seat == SeatType.Standard);
+
+    int DefaultType => TypeChoices.FirstOrDefault()?.TicketTypeId ?? 0;
+
+    QuoteRow? Quote(int typeId, SeatType seat) => _quotes.FirstOrDefault(q => q.TicketTypeId == typeId && q.Seat == seat);
+
+    decimal Total => Mine.Sum(x => Quote(_types.GetValueOrDefault(x.Code, DefaultType), x.Type)?.Quote.Total ?? 0)
+        + _items.Sum(kv => (_menu.FirstOrDefault(m => m.Id == kv.Key)?.Price ?? 0) * kv.Value);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _now = Time.GetLocalNow().DateTime;
+        (_staffId, _staffName, _) = await Staff.GetAsync();
+        Holds.Changed += OnHoldsChanged;
+        var menu = await Sender.SendAsync(new ListConcessions(true));
+        if (menu.IsSuccess) _menu = menu.Value;
+        await LoadSessionsAsync();
+        if (SessionParam is int sid) await SelectAsync(sid);
+        else if (VisibleSessions.FirstOrDefault(s => s.Start > _now) is { } next) await SelectAsync(next.Id);
+    }
+
+    async Task LoadSessionsAsync()
+    {
+        var day = DateOnly.FromDateTime(_now).AddDays(_dayOffset);
+        var r = await Sender.SendAsync(new ListSessions(day, day));
+        if (r.IsSuccess) _sessions = r.Value;
+    }
+
+    async Task SelectAsync(int id)
+    {
+        if (_sessionId != id) { Holds.ReleaseAll(HolderId); _types.Clear(); }
+        _sessionId = id;
+        await LoadMapAsync();
+        var q = await Sender.SendAsync(new GetQuotes(id));
+        if (q.IsSuccess) _quotes = q.Value;
+    }
+
+    async Task LoadMapAsync()
+    {
+        if (_sessionId is not int id) return;
+        var r = await Sender.SendAsync(new GetSeatMap(id));
+        if (!r.IsSuccess) { Toast.Error(r.ErrorMessage); return; }
+        _map = r.Value;
+        _layout = HallLayout.Parse(_map.Layout);
+        _holds = Holds.Holds(id);
+    }
+
+    void OnHoldsChanged(int sessionId)
+    {
+        if (sessionId != _sessionId) return;
+        _ = InvokeAsync(async () => { await LoadMapAsync(); StateHasChanged(); });
+    }
+
+    void Toggle(SeatInfo seat)
+    {
+        if (_map is null || _sessionId is not int id) return;
+        if (_holds.Any(h => h.SeatCode == seat.Code && h.HolderId == HolderId)) { Holds.Release(id, seat.Code, HolderId); return; }
+        if (!Holds.TryHold(id, seat.Code, HolderId, new HashSet<string>(_map.SoldSeats, StringComparer.OrdinalIgnoreCase)))
+            Toast.Warning($"{seat.Code} şu an başka bir sepette.");
+    }
+
+    void AddItem(int id, int delta)
+    {
+        var q = _items.GetValueOrDefault(id) + delta;
+        if (q <= 0) _items.Remove(id); else _items[id] = q;
+    }
+
+    void Clear()
+    {
+        Holds.ReleaseAll(HolderId);
+        _items.Clear();
+        _types.Clear();
+    }
+
+    async Task SellAsync()
+    {
+        _busy = true;
+        var seats = Mine.Select(x => new SeatPick(x.Code, _types.GetValueOrDefault(x.Code, DefaultType))).ToList();
+        var items = _items.Select(kv => new ConcessionPick(kv.Key, kv.Value)).ToList();
+        var r = await Sender.SendAsync(new SellTickets(seats.Count > 0 ? _sessionId : null, seats, items, SalesChannel.BoxOffice, _pay, null, _staffId, HolderId));
+        _busy = false;
+        if (!r.IsSuccess) { Toast.Error(r.ErrorMessage); await LoadMapAsync(); return; }
+        var o = await Sender.SendAsync(new GetOrder(r.Value));
+        _done = o.IsSuccess ? o.Value : null;
+        _items.Clear();
+        _types.Clear();
+        await LoadSessionsAsync();
+        await LoadMapAsync();
+    }
+
+    public void Dispose()
+    {
+        Holds.Changed -= OnHoldsChanged;
+        Holds.ReleaseAll(HolderId);
+    }
+}

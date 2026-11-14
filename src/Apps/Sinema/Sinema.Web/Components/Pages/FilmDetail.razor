@@ -1,0 +1,68 @@
+@page "/film/{Id:int}"
+@inject ISender Sender
+@inject TimeProvider Time
+<PageTitle>@(_view?.Film.Title ?? "Film")</PageTitle>
+
+@if (_error is not null)
+{
+    <div class="cine-wrap"><OndaEmpty Icon="movie-off-outline" Title="Film bulunamadı" Text="@_error" /></div>
+}
+else if (_view is { } v)
+{
+    var f = v.Film;
+    <section class="hero small" style="--accent:@f.AccentColor">
+        <div class="hero-bg" style="background-image:url('@f.Poster')"></div>
+        <div class="cine-wrap hero-in">
+            <Poster Src="@f.Poster" Alt="@f.Title" Class="hero-poster" />
+            <div class="hero-text">
+                <div class="o-row"><span class="tag">@f.StatusText</span><RatingBadge Rating="f.Rating" /></div>
+                <h1>@f.Title</h1>
+                <div class="facts">
+                    <span><OndaIcon Name="tag-outline" />@f.Genres</span>
+                    <span><OndaIcon Name="clock-outline" />@f.Duration</span>
+                    <span><OndaIcon Name="calendar-blank-outline" />@f.ReleaseDate.ToString("d MMMM yyyy", Texts.Turkish)</span>
+                    @if (!string.IsNullOrEmpty(f.Country)) { <span><OndaIcon Name="earth" />@f.Country</span> }
+                </div>
+                <p class="hero-syn">@f.Synopsis</p>
+                <dl class="credits">
+                    <dt>Yönetmen</dt><dd>@f.Director</dd>
+                    <dt>Oyuncular</dt><dd>@f.Cast</dd>
+                    <dt>Sınıflandırma</dt><dd>@f.RatingText</dd>
+                </dl>
+            </div>
+        </div>
+    </section>
+    <section class="cine-wrap">
+        <div class="sec-head"><h2>Seanslar</h2></div>
+        @if (v.Sessions.Count == 0)
+        {
+            <OndaEmpty Icon="calendar-remove-outline" Title="@(f.Status == FilmStatus.ComingSoon ? "Yakında vizyonda" : "Önümüzdeki günlerde seans yok")"
+                       Text="@(f.Status == FilmStatus.ComingSoon ? $"{f.ReleaseDate:d MMMM} tarihinden itibaren seanslar açılacak." : null)" />
+        }
+        @foreach (var g in v.Sessions.GroupBy(s => s.Day))
+        {
+            <div class="day-block">
+                <div class="day-title"><b>@(g.Key == _today ? "Bugün" : g.Key == _today.AddDays(1) ? "Yarın" : Texts.DayName(g.Key))</b> <span class="o-muted">@g.Key.ToString("d MMMM", Texts.Turkish)</span></div>
+                <div class="chips">
+                    @foreach (var s in g) { <SessionChip Session="s" CloseMinutes="v.OnlineCloseMinutes" Now="_now" /> }
+                </div>
+            </div>
+        }
+    </section>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    FilmDetailView? _view;
+    string? _error;
+    DateOnly _today;
+    DateTime _now;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _now = Time.GetLocalNow().DateTime;
+        _today = DateOnly.FromDateTime(_now);
+        var r = await Sender.SendAsync(new GetFilmDetail(Id));
+        if (r.IsSuccess) _view = r.Value; else _error = r.ErrorMessage;
+    }
+}

@@ -1,0 +1,42 @@
+@page "/yonetim/salonlar"
+@attribute [Authorize(Roles = Roles.Manager)]
+@inject ISender Sender
+<PageHeader Title="Salonlar" Subtitle="@($"{_halls.Count} salon · toplam {_halls.Where(h => h.IsActive).Sum(h => h.Capacity):N0} koltuk")">
+    <Actions><OndaButton Text="Yeni salon" Icon="plus" Kind="OndaButtonKind.Primary" Href="/yonetim/salonlar/yeni" /></Actions>
+</PageHeader>
+
+<div class="hall-grid">
+    @foreach (var h in _halls)
+    {
+        <a class="o-card hall-card @(h.IsActive ? "" : "off")" href="@($"/yonetim/salonlar/{h.Id}")">
+            <div class="hall-preview"><SeatMap Layout="h.Parsed" Compact="true" ShowLegend="false" ShowNumbers="false" ReadOnly="true" /></div>
+            <div class="o-card-body">
+                <div class="o-row" style="justify-content:space-between">
+                    <div><div class="o-card-title">@h.Name</div><div class="o-small o-muted">@(h.Features ?? "—")</div></div>
+                    <div class="o-row" style="gap:6px">
+                        @if (h.Supports3D) { <OndaBadge Text="3D" Tone="OndaTone.Info" /> }
+                        @if (!h.IsActive) { <OndaBadge Text="Kapalı" Tone="OndaTone.Danger" /> }
+                    </div>
+                </div>
+                <div class="hall-stats">
+                    <div><b>@h.Capacity</b><small>koltuk</small></div>
+                    <div><b>@h.Vip</b><small>VIP</small></div>
+                    <div><b>@h.Couple</b><small>çift</small></div>
+                    <div><b>@h.Accessible</b><small>engelli</small></div>
+                    <div><b>@OndaFormat.Percent(h.Occupancy30)</b><small>30 gün doluluk</small></div>
+                </div>
+                <div class="o-small o-muted"><OndaIcon Name="calendar-today" /> Bugün @h.SessionsToday seans · @h.UpcomingSessions ileri tarihli</div>
+            </div>
+        </a>
+    }
+</div>
+
+@code {
+    IReadOnlyList<HallRow> _halls = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var r = await Sender.SendAsync(new ListHalls());
+        if (r.IsSuccess) _halls = r.Value;
+    }
+}

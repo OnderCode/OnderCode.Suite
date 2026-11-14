@@ -1,0 +1,6 @@
+<span class="rating r@((int)Rating) @Class" title="@Texts.Of(Rating)">@Texts.Short(Rating)</span>
+
+@code {
+    [Parameter] public AgeRating Rating { get; set; }
+    [Parameter] public string? Class { get; set; }
+}

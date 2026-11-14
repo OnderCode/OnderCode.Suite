@@ -1,0 +1,74 @@
+@page "/yonetim/bufe"
+@attribute [Authorize(Roles = Roles.Manager)]
+@inject ISender Sender
+@inject OndaToastService Toast
+<PageHeader Title="Büfe" Subtitle="@($"{_items.Count(i => i.IsActive)} ürün satışta · son 30 gün {Texts.MoneyShort(_items.Sum(i => i.Revenue30))}")">
+    <Actions><OndaButton Text="Ürün ekle" Icon="plus" Kind="OndaButtonKind.Primary" OnClick="() => Edit(null)" /></Actions>
+</PageHeader>
+
+<div class="o-grid o-grid-3">
+    <OndaGrid Items="_items" Title="Ürünler" ExportName="Büfe ürünleri" ExportAccent="E11D48" PageSize="0" Class="o-span-2" OnRowClick="@((ConcessionRow i) => Edit(i))">
+        <OndaGridColumn TItem="ConcessionRow" Title="Ürün" Value="i => i.Name" />
+        <OndaGridColumn TItem="ConcessionRow" Title="Kategori" Value="i => i.CategoryText" Kind="OndaColumnKind.Badge" Width="120px" Tone="@(i => i.Category == ConcessionCategory.Menu ? OndaTone.Primary : OndaTone.Neutral)" />
+        <OndaGridColumn TItem="ConcessionRow" Title="Fiyat" Value="i => i.Price" Kind="OndaColumnKind.Money" Width="110px" />
+        <OndaGridColumn TItem="ConcessionRow" Title="30 gün adet" Value="i => i.Sold30" Kind="OndaColumnKind.Number" Width="110px" Total="true" />
+        <OndaGridColumn TItem="ConcessionRow" Title="30 gün ciro" Value="i => i.Revenue30" Kind="OndaColumnKind.Money" Width="130px" Total="true" />
+        <OndaGridColumn TItem="ConcessionRow" Title="Durum" Value="@(i => i.IsActive ? "Satışta" : "Kapalı")" Kind="OndaColumnKind.Badge" Width="100px" Tone="@(i => i.IsActive ? OndaTone.Success : OndaTone.Neutral)" />
+    </OndaGrid>
+    <OndaCard Title="Kategori payı" Subtitle="Son 30 gün ciro" Icon="chart-donut">
+        <OndaDonut Slices="@Slices" Center="@Texts.MoneyShort(_items.Sum(i => i.Revenue30))" Caption="30 gün" Size="150" ValueFormat="@(v => Texts.MoneyShort((decimal)v))" />
+    </OndaCard>
+</div>
+
+<OndaModal @bind-Open="_open" Title="@(_id is null ? "Yeni ürün" : _name)" Icon="popcorn" Size="sm">
+    <ChildContent>
+        <div class="o-col">
+            <OndaTextBox Label="Ürün adı" @bind-Value="_name" Required="true" />
+            <OndaSelect TValue="ConcessionCategory" Label="Kategori" Items="_cats" @bind-Value="_cat" />
+            <OndaNumberBox TValue="decimal" Label="Fiyat" @bind-Value="_price" Suffix="₺" Decimals="2" />
+            <OndaSwitch Text="Satışta" @bind-Value="_active" />
+        </div>
+    </ChildContent>
+    <Footer>
+        <OndaButton Text="Vazgeç" Kind="OndaButtonKind.Ghost" OnClick="() => _open = false" />
+        <OndaButton Text="Kaydet" Icon="content-save-outline" Kind="OndaButtonKind.Primary" OnClick="SaveAsync" />
+    </Footer>
+</OndaModal>
+
+@code {
+    IReadOnlyList<ConcessionRow> _items = [];
+    bool _open, _active = true;
+    int? _id;
+    string? _name;
+    decimal _price;
+    ConcessionCategory _cat;
+    readonly IReadOnlyList<OndaOption<ConcessionCategory>> _cats = Enum.GetValues<ConcessionCategory>().Select(c => new OndaOption<ConcessionCategory>(c, Texts.Of(c))).ToList();
+    static readonly string[] Colors = ["#F59E0B", "#3B82F6", "#EC4899", "#E11D48"];
+
+    IReadOnlyList<OndaSlice> Slices => Enum.GetValues<ConcessionCategory>()
+        .Select(c => new OndaSlice(Texts.Of(c), (double)_items.Where(i => i.Category == c).Sum(i => i.Revenue30), Colors[(int)c])).ToList();
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    async Task LoadAsync()
+    {
+        var r = await Sender.SendAsync(new ListConcessions());
+        if (r.IsSuccess) _items = r.Value;
+    }
+
+    void Edit(ConcessionRow? i)
+    {
+        if (i is null) { _id = null; _name = ""; _price = 100; _cat = ConcessionCategory.Snack; _active = true; }
+        else { _id = i.Id; _name = i.Name; _price = i.Price; _cat = i.Category; _active = i.IsActive; }
+        _open = true;
+    }
+
+    async Task SaveAsync()
+    {
+        var r = await Sender.SendAsync(new SaveConcession(_id, _name ?? "", _cat, _price, _active));
+        if (!r.IsSuccess) { Toast.Error(r.ErrorMessage); return; }
+        _open = false;
+        Toast.Success("Ürün kaydedildi.");
+        await LoadAsync();
+    }
+}

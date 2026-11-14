@@ -1,0 +1,8 @@
+@inject PageInfo Info
+@code {
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public RenderFragment? Actions { get; set; }
+
+    protected override void OnParametersSet() => Info.Set(Title, Subtitle, Actions);
+}

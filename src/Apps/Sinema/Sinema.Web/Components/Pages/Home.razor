@@ -1,0 +1,115 @@
+@page "/"
+@inject ISender Sender
+@inject TimeProvider Time
+<PageTitle>@(_view?.CinemaName ?? "Sinema") · Vizyondaki filmler ve seanslar</PageTitle>
+
+@if (_view is null)
+{
+    <div class="cine-wrap o-empty">Program yükleniyor…</div>
+    return;
+}
+
+@if (_view.Featured is { } hero)
+{
+    <section class="hero" style="--accent:@hero.AccentColor">
+        <div class="hero-bg" style="background-image:url('@hero.Poster')"></div>
+        <div class="cine-wrap hero-in">
+            <Poster Src="@hero.Poster" Alt="@hero.Title" Class="hero-poster" />
+            <div class="hero-text">
+                <div class="o-row"><span class="tag">Vizyonda</span><RatingBadge Rating="hero.Rating" /><span class="o-muted">@hero.Genres · @hero.Duration</span></div>
+                <h1>@hero.Title</h1>
+                <p class="hero-syn">@hero.Synopsis</p>
+                <div class="o-muted o-small">Yönetmen: @hero.Director · Oyuncular: @hero.Cast</div>
+                <div class="o-row" style="margin-top:18px">
+                    <OndaButton Text="Seansları gör" Icon="ticket-outline" Kind="OndaButtonKind.Primary" Size="OndaSize.Large" Href="@($"/film/{hero.Id}")" />
+                    <OndaButton Text="Bugünün programı" Icon="calendar-today" Kind="OndaButtonKind.Outline" Size="OndaSize.Large" Href="/#program" />
+                </div>
+            </div>
+        </div>
+    </section>
+}
+
+<section class="cine-wrap" id="program">
+    <div class="sec-head">
+        <h2>Vizyondaki filmler</h2>
+        <div class="day-tabs">
+            @for (var i = 0; i < Days; i++)
+            {
+                var d = _today.AddDays(i);
+                <button class="day-tab @(d == _day ? "on" : "")" @onclick="() => _day = d">
+                    <small>@(i == 0 ? "Bugün" : i == 1 ? "Yarın" : Texts.DayShort(d))</small>
+                    <b>@d.Day</b>
+                    <small>@d.ToString("MMM", Texts.Turkish)</small>
+                </button>
+            }
+        </div>
+    </div>
+
+    @{
+        var list = _view.NowShowing.Select(p => (p.Film, Sessions: p.Sessions.Where(s => s.Day == _day).ToList())).Where(x => x.Sessions.Count > 0).ToList();
+    }
+    @if (list.Count == 0)
+    {
+        <OndaEmpty Icon="calendar-remove-outline" Title="Bu gün için seans yok" Text="Başka bir gün seçin." />
+    }
+    <div class="film-list">
+        @foreach (var (film, sessions) in list)
+        {
+            <article class="film-row" style="--accent:@film.AccentColor">
+                <a href="@($"/film/{film.Id}")"><Poster Src="@film.Poster" Alt="@film.Title" /></a>
+                <div class="film-row-body">
+                    <div class="o-row" style="gap:8px">
+                        <a class="film-title" href="@($"/film/{film.Id}")">@film.Title</a>
+                        <RatingBadge Rating="film.Rating" />
+                    </div>
+                    <div class="o-muted o-small">@film.Genres · @film.Duration · @film.Director</div>
+                    <p class="film-syn">@film.Synopsis</p>
+                    <div class="chips">
+                        @foreach (var s in sessions)
+                        {
+                            <SessionChip Session="s" CloseMinutes="_view.OnlineCloseMinutes" Now="_now" />
+                        }
+                    </div>
+                </div>
+            </article>
+        }
+    </div>
+</section>
+
+@if (_view.ComingSoon.Count > 0)
+{
+    <section class="cine-wrap" id="yakinda">
+        <div class="sec-head"><h2>Yakında</h2></div>
+        <div class="poster-grid">
+            @foreach (var f in _view.ComingSoon)
+            {
+                <a class="poster-card" href="@($"/film/{f.Id}")">
+                    <Poster Src="@f.Poster" Alt="@f.Title" />
+                    <b>@f.Title</b>
+                    <small class="o-muted">@f.ReleaseDate.ToString("d MMMM", Texts.Turkish) · @f.Genres</small>
+                </a>
+            }
+        </div>
+    </section>
+}
+
+@code {
+    const int Days = 7;
+    ProgramView? _view;
+    DateOnly _today, _day;
+    DateTime _now;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _today = DateOnly.FromDateTime(Time.GetLocalNow().DateTime);
+        _now = Time.GetLocalNow().DateTime;
+        _day = _today;
+        var r = await Sender.SendAsync(new GetProgram(_today, Days));
+        if (r.IsSuccess)
+        {
+            _view = r.Value;
+            // Bugünün seansları bittiyse yarını göster
+            if (!_view.NowShowing.Any(p => p.Sessions.Any(s => s.Day == _today))) _day = _today.AddDays(1);
+        }
+    }
+}

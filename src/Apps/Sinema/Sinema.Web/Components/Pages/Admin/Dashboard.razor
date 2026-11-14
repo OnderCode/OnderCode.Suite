@@ -1,0 +1,117 @@
+@page "/yonetim"
+@attribute [Authorize(Roles = Roles.Manager)]
+@implements IDisposable
+@inject ISender Sender
+@inject SeatHoldService Holds
+@inject TimeProvider Time
+<PageHeader Title="Gösterge" Subtitle="@DateOnly.FromDateTime(_now).ToString("d MMMM yyyy dddd", Texts.Turkish)">
+    <Actions>
+        <OndaButton Text="Gişe" Icon="ticket-confirmation-outline" Kind="OndaButtonKind.Outline" Href="/gise" />
+        <OndaButton Text="Seans ekle" Icon="plus" Kind="OndaButtonKind.Primary" Href="/yonetim/seanslar?yeni=1" />
+    </Actions>
+</PageHeader>
+
+@if (_d is null) { <div class="o-empty">Yükleniyor…</div> return; }
+
+<div class="o-grid o-grid-4">
+    <OndaStatCard Title="Bugün satılan bilet" Value="@_d.TicketsToday.ToString("N0")" Icon="ticket-outline" Delta="@Delta(_d.TicketsToday, _d.TicketsYesterday)" Note="dünün tamamına göre" Spark="@_d.TicketRevenue14" />
+    <OndaStatCard Title="Bugünkü ciro" Value="@Texts.MoneyShort(_d.RevenueToday)" Icon="cash-multiple" Tone="OndaTone.Success" Delta="@Delta((double)_d.RevenueToday, (double)_d.RevenueYesterday)" Note="dün bu saate göre" />
+    <OndaStatCard Title="Doluluk (bugün)" Value="@OndaFormat.Percent(_d.OccupancyToday)" Icon="seat-outline" Tone="OndaTone.Warning" Note="@($"{_d.SessionsToday} seans · dün {OndaFormat.Percent(_d.OccupancyYesterday)}")" />
+    <OndaStatCard Title="Büfe (bugün)" Value="@Texts.MoneyShort(_d.ConcessionToday)" Icon="popcorn" Tone="OndaTone.Info" Delta="@Delta((double)_d.ConcessionToday, (double)_d.ConcessionYesterday)" Note="@($"online pay {OndaFormat.Percent(_d.OnlineShareToday)}")" />
+</div>
+
+<div class="o-grid o-grid-3" style="margin-top:16px">
+    <OndaCard Title="Son 14 gün" Subtitle="Bilet ve büfe cirosu" Class="o-span-2">
+        <OndaChart Kind="OndaChartKind.Bar" Labels="@_d.Days.Select(d => d.ToString("dd.MM")).ToList()" LabelEvery="2" Highlight="13" Height="250"
+                   Series="@([new OndaSeries("Bilet", _d.TicketRevenue14), new OndaSeries("Büfe", _d.ConcessionRevenue14, "#F59E0B")])"
+                   ValueFormat="@(v => v >= 1000 ? (v / 1000).ToString("0.#", Texts.Turkish) + " B" : v.ToString("N0"))" />
+    </OndaCard>
+    <OndaCard Title="Şu an oynayan" Subtitle="@($"{_d.NowPlaying.Count} salon dolu · {_d.CheckedInToday} kişi içeri girdi")">
+        @if (_d.NowPlaying.Count == 0) { <OndaEmpty Icon="sleep" Title="Şu an gösterim yok" /> }
+        <div class="o-col" style="gap:12px">
+            @foreach (var s in _d.NowPlaying)
+            {
+                var elapsed = Math.Clamp((_now - s.Start).TotalMinutes / Math.Max(1, (s.End - s.Start).TotalMinutes), 0, 1);
+                <div class="mini-session">
+                    <Poster Src="@s.PosterUrl" Class="mini" />
+                    <div style="flex:1;min-width:0">
+                        <div class="o-row" style="justify-content:space-between"><b class="o-ellipsis">@s.FilmTitle</b><span class="o-small o-muted">@s.HallName</span></div>
+                        <OndaProgress Value="elapsed" />
+                        <div class="o-small o-muted">@s.Start.ToString("HH:mm")–@s.End.ToString("HH:mm") · @s.Sold/@s.Capacity kişi</div>
+                    </div>
+                </div>
+            }
+        </div>
+    </OndaCard>
+</div>
+
+<div class="o-grid o-grid-3" style="margin-top:16px">
+    <OndaGrid Items="_d.Upcoming" Title="Sıradaki seanslar" Searchable="false" PageSize="0" Class="o-span-2" OnRowClick="@((SessionRow s) => Nav.NavigateTo($"/gise?seans={s.Id}"))">
+        <OndaGridColumn TItem="SessionRow" Title="Saat" Value="s => s.Start" Kind="OndaColumnKind.Time" Width="70px" />
+        <OndaGridColumn TItem="SessionRow" Title="Film" Value="s => s.FilmTitle" />
+        <OndaGridColumn TItem="SessionRow" Title="Salon" Value="s => s.HallName" Width="100px" />
+        <OndaGridColumn TItem="SessionRow" Title="Format" Value="@(s => $"{s.FormatText} · {s.LanguageText}")" Width="120px" />
+        <OndaGridColumn TItem="SessionRow" Title="Satılan" Value="s => s.Sold" Kind="OndaColumnKind.Number" Width="80px" />
+        <OndaGridColumn TItem="SessionRow" Title="Doluluk" Value="s => s.Occupancy" Kind="OndaColumnKind.Progress" Width="150px" Tone="@(s => s.Occupancy > .8 ? OndaTone.Danger : s.Occupancy > .5 ? OndaTone.Warning : OndaTone.Success)" />
+    </OndaGrid>
+    <OndaCard Title="Haftanın filmleri" Subtitle="Son 7 gün, ciroya göre">
+        <div class="o-col" style="gap:12px">
+            @{ var max = _d.TopFilms.Select(f => f.Revenue).DefaultIfEmpty(1).Max(); }
+            @foreach (var f in _d.TopFilms)
+            {
+                <div class="mini-session">
+                    <Poster Src="@(f.Poster ?? "posters/bos.svg")" Class="mini" />
+                    <div style="flex:1;min-width:0">
+                        <div class="o-row" style="justify-content:space-between"><b class="o-ellipsis">@f.Title</b><b>@Texts.MoneyShort(f.Revenue)</b></div>
+                        <div class="o-progress"><span style="width:@((double)(f.Revenue / (max == 0 ? 1 : max)) * 100)%;background:@f.Accent"></span></div>
+                        <div class="o-small o-muted">@f.Tickets.ToString("N0") bilet · doluluk @OndaFormat.Percent(f.Occupancy)</div>
+                    </div>
+                </div>
+            }
+        </div>
+    </OndaCard>
+</div>
+
+<div style="margin-top:16px">
+    <OndaGrid Items="_d.RecentOrders" Title="Bugünün son satışları" Searchable="false" PageSize="0" Dense="true" OnRowClick="@((OrderRow o) => Nav.NavigateTo($"/bilet/{o.Code}"))">
+        <OndaGridColumn TItem="OrderRow" Title="Saat" Value="o => o.SoldAt" Kind="OndaColumnKind.Time" Width="70px" />
+        <OndaGridColumn TItem="OrderRow" Title="Kod" Value="o => o.Code" Width="110px" Class="o-mono" />
+        <OndaGridColumn TItem="OrderRow" Title="İçerik" Value="o => o.What" />
+        <OndaGridColumn TItem="OrderRow" Title="Koltuklar" Value="o => o.Seats" Width="160px" />
+        <OndaGridColumn TItem="OrderRow" Title="Kanal" Value="o => o.ChannelText" Kind="OndaColumnKind.Badge" Width="90px" Tone="@(o => o.Channel == SalesChannel.Online ? OndaTone.Info : OndaTone.Neutral)" />
+        <OndaGridColumn TItem="OrderRow" Title="Tutar" Value="o => o.Total" Kind="OndaColumnKind.Money" Width="110px" />
+    </OndaGrid>
+</div>
+
+@code {
+    [Inject] NavigationManager Nav { get; set; } = null!;
+    DashboardView? _d;
+    DateTime _now;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Holds.Changed += OnChanged;
+        await LoadAsync();
+    }
+
+    async Task LoadAsync()
+    {
+        _now = Time.GetLocalNow().DateTime;
+        var r = await Sender.SendAsync(new GetDashboard());
+        if (r.IsSuccess) _d = r.Value;
+    }
+
+    // Satış ya da giriş olunca gösterge kendiliğinden yenilenir
+    DateTime _lastLoad;
+
+    void OnChanged(int sessionId)
+    {
+        if ((DateTime.UtcNow - _lastLoad).TotalSeconds < 3) return;
+        _lastLoad = DateTime.UtcNow;
+        _ = InvokeAsync(async () => { await Task.Delay(500); await LoadAsync(); StateHasChanged(); });
+    }
+
+    static double? Delta(double now, double before) => before <= 0 ? null : now / before - 1;
+
+    public void Dispose() => Holds.Changed -= OnChanged;
+}

@@ -1,0 +1,45 @@
+@inherits LayoutComponentBase
+@inject ISender Sender
+<div class="cine" data-theme="dark">
+    <header class="cine-head">
+        <div class="cine-wrap cine-head-in">
+            <a class="cine-logo" href="/">
+                <span class="cine-logo-mark"><OndaIcon Name="movie-open-outline" /></span>
+                <span><b>@_name</b><small>@_branch</small></span>
+            </a>
+            <nav class="cine-nav">
+                <a href="/">Vizyondakiler</a>
+                <a href="/#yakinda">Yakında</a>
+                <a href="/biletim">Biletim</a>
+            </nav>
+            <div class="o-spacer"></div>
+            <OndaButton Text="Personel girişi" Icon="account-tie-outline" Kind="OndaButtonKind.Ghost" Size="OndaSize.Small" Href="/yonetim/giris" />
+        </div>
+    </header>
+    <main>@Body</main>
+    <footer class="cine-foot">
+        <div class="cine-wrap">
+            <div class="o-row" style="justify-content:space-between">
+                <div>
+                    <b>@_name</b> · açık kaynak sinema yönetim ve bilet sistemi
+                    <div class="o-muted o-small">Bu bir demodur: filmler, afişler ve kişiler uydurmadır. Ödeme alınmaz.</div>
+                </div>
+                <div class="o-row o-small">
+                    <a href="https://github.com/OnderCode/OnderCode.Suite" target="_blank" rel="noopener">GitHub</a>
+                    <a href="https://ondercode.com" target="_blank" rel="noopener">ondercode.com</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+</div>
+<OndaToastHost />
+
+@code {
+    string _name = "OnderCode Sinema", _branch = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var r = await Sender.SendAsync(new GetCinemaName());
+        if (r.IsSuccess) (_name, _branch) = r.Value;
+    }
+}

@@ -1,0 +1,127 @@
+@* Salon koltuk planı. Müşteri, gişe ve tasarımcı aynı bileşeni kullanır. *@
+<div class="seatmap @(Compact ? "compact" : "") @(Design ? "design" : "") @Class">
+    <div class="screen"><span>PERDE</span></div>
+    <div class="seat-grid" style="grid-template-columns: @(Compact ? "2px" : "22px") repeat(@Layout.Cols, var(--seat)) @(Compact ? "2px" : "22px")" @onmouseup="() => _painting = false" @onmouseleave="() => _painting = false">
+        @for (var r = 0; r < Layout.Rows; r++)
+        {
+            var row = r;
+            var letter = Layout.Seats.FirstOrDefault(s => s.Row == row)?.RowLetter.ToString() ?? "";
+            <div class="row-label @(Design ? "clickable" : "")" title="@(Design ? "Bütün sırayı seçili araçla doldur" : null)" @onclick="() => RowClicked(row)">@(Design ? (row + 1).ToString() : letter)</div>
+            for (var c = 0; c < Layout.Cols; c++)
+            {
+                var col = c;
+                var cell = Layout.Cell(row, col);
+                var seat = cell == '.' ? null : Layout.Seats.First(s => s.Row == row && s.Col == col);
+                if (seat is null)
+                {
+                    if (Design)
+                    {
+                        <button type="button" class="seat empty" title="Boşluk" @onmousedown="() => PaintStart(row, col)" @onmouseenter="() => PaintOver(row, col)"></button>
+                    }
+                    else
+                    {
+                        <div class="gap"></div>
+                    }
+                }
+                else
+                {
+                    var state = StateOf(seat);
+                    <button type="button" class="seat @TypeCss(seat.Type) @CoupleCss(row, col) @state" title="@Tip(seat, state)" disabled="@(!Design && !Clickable(state))"
+                            @onclick="() => Clicked(seat)" @onmousedown="() => PaintStart(row, col)" @onmouseenter="() => PaintOver(row, col)">
+                        @if (seat.Type == SeatType.Accessible) { <OndaIcon Name="wheelchair-accessibility" /> }
+                        else if (ShowNumbers) { <span>@seat.Number</span> }
+                    </button>
+                }
+            }
+            <div class="row-label">@letter</div>
+        }
+    </div>
+    @if (ShowLegend)
+    {
+        <div class="seat-legend">
+            <span><i class="seat free"></i>Boş</span>
+            @if (Layout.Count(SeatType.Vip) > 0) { <span><i class="seat vip free"></i>VIP</span> }
+            @if (Layout.Count(SeatType.Couple) > 0) { <span><i class="seat couple free"></i>Çift koltuk</span> }
+            @if (Layout.Count(SeatType.Accessible) > 0) { <span><i class="seat accessible free"></i>Engelli</span> }
+            @if (!Design)
+            {
+                <span><i class="seat mine"></i>Seçiminiz</span>
+                <span><i class="seat held"></i>Başkasının sepetinde</span>
+                <span><i class="seat sold"></i>Dolu</span>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public HallLayout Layout { get; set; } = HallLayout.Grid(5, 8);
+    [Parameter] public IReadOnlySet<string>? Sold { get; set; }
+    [Parameter] public IReadOnlySet<string>? Used { get; set; }
+    [Parameter] public IReadOnlyList<SeatHold>? Holds { get; set; }
+    [Parameter] public string? Holder { get; set; }
+    /// <summary>Tasarım modunda boş hücreler de tıklanır, satış durumu gösterilmez.</summary>
+    [Parameter] public bool Design { get; set; }
+    [Parameter] public bool Compact { get; set; }
+    [Parameter] public bool ShowLegend { get; set; } = true;
+    [Parameter] public bool ShowNumbers { get; set; } = true;
+    [Parameter] public bool ReadOnly { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public EventCallback<SeatInfo> OnSeatClick { get; set; }
+    [Parameter] public EventCallback<(int Row, int Col)> OnCellClick { get; set; }
+
+    string StateOf(SeatInfo s)
+    {
+        if (Design) return "free";
+        if (Used?.Contains(s.Code) == true) return "sold used";
+        if (Sold?.Contains(s.Code) == true) return "sold";
+        var hold = Holds?.FirstOrDefault(h => h.SeatCode == s.Code);
+        if (hold is not null) return hold.HolderId == Holder ? "mine" : "held";
+        return "free";
+    }
+
+    bool Clickable(string state) => !ReadOnly && (state == "free" || state == "mine");
+
+    static string TypeCss(SeatType t) => t switch { SeatType.Vip => "vip", SeatType.Accessible => "accessible", SeatType.Couple => "couple", _ => "" };
+
+    /// <summary>Yan yana çift koltuklar birleşik görünür (soldan ikişer eşlenir).</summary>
+    string CoupleCss(int row, int col)
+    {
+        if (Layout.Cell(row, col) != 'C') return "";
+        var start = col;
+        while (start > 0 && Layout.Cell(row, start - 1) == 'C') start--;
+        return (col - start) % 2 == 0 ? (Layout.Cell(row, col + 1) == 'C' ? "pair-l" : "") : "pair-r";
+    }
+
+    static string Tip(SeatInfo s, string state) => $"{s.Code} · {Texts.Of(s.Type)}" + state switch
+    {
+        "sold used" => " · içeride",
+        "sold" => " · dolu",
+        "held" => " · başkasının sepetinde",
+        "mine" => " · seçtiniz",
+        _ => "",
+    };
+
+    [Parameter] public EventCallback<int> OnRowClick { get; set; }
+
+    bool _painting;
+
+    async Task Clicked(SeatInfo seat)
+    {
+        if (!Design) await OnSeatClick.InvokeAsync(seat);
+    }
+
+    // Tasarım: fareye basılı tutup sürükleyerek boyama
+    async Task PaintStart(int row, int col)
+    {
+        if (!Design) return;
+        _painting = true;
+        await OnCellClick.InvokeAsync((row, col));
+    }
+
+    async Task PaintOver(int row, int col)
+    {
+        if (Design && _painting) await OnCellClick.InvokeAsync((row, col));
+    }
+
+    Task RowClicked(int row) => Design ? OnRowClick.InvokeAsync(row) : Task.CompletedTask;
+}

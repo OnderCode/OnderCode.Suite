@@ -33,6 +33,12 @@
     <Project Path="src/Apps/Eczane/Eczane.Infrastructure/Eczane.Infrastructure.csproj" />
     <Project Path="src/Apps/Eczane/Eczane.WinForms/Eczane.WinForms.csproj" />
   </Folder>
+  <Folder Name="/src/Apps/Sinema/">
+    <Project Path="src/Apps/Sinema/Sinema.Domain/Sinema.Domain.csproj" />
+    <Project Path="src/Apps/Sinema/Sinema.Application/Sinema.Application.csproj" />
+    <Project Path="src/Apps/Sinema/Sinema.Infrastructure/Sinema.Infrastructure.csproj" />
+    <Project Path="src/Apps/Sinema/Sinema.Web/Sinema.Web.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/OnderCode.Data.Tests/OnderCode.Data.Tests.csproj" />
     <Project Path="tests/OnderCode.Application.Tests/OnderCode.Application.Tests.csproj" />
@@ -40,5 +46,6 @@
     <Project Path="tests/Otel.Tests/Otel.Tests.csproj" />
     <Project Path="tests/Otopark.Tests/Otopark.Tests.csproj" />
     <Project Path="tests/Eczane.Tests/Eczane.Tests.csproj" />
+    <Project Path="tests/Sinema.Tests/Sinema.Tests.csproj" />
   </Folder>
 </Solution>

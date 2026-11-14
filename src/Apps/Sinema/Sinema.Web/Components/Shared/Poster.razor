@@ -1,0 +1,8 @@
+<img class="poster @Class" src="@(string.IsNullOrEmpty(Src) ? "posters/bos.svg" : Src)" alt="@Alt" loading="lazy" style="@Style" />
+
+@code {
+    [Parameter] public string? Src { get; set; }
+    [Parameter] public string? Alt { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Style { get; set; }
+}

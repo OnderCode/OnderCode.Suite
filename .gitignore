@@ -21,3 +21,8 @@ eczane-test.log
 eczane-test-full.log
 docs/eczane/veri/
 eczane-hepsi.bat
+logs/
+docs/sinema/raw-*/
+App_Data/
+src/Apps/Sinema/Sinema.Web/wwwroot/uploads/*
+!src/Apps/Sinema/Sinema.Web/wwwroot/uploads/.gitkeep

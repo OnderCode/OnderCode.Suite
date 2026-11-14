@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Sinema veri erişimi: EF Core + SQLite bağlamı, eşlemeler, afiş deposu, örnek veri. -->
+  <PropertyGroup>
+    <RootNamespace>Sinema.Infrastructure</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Sinema.Application\Sinema.Application.csproj" />
+    <ProjectReference Include="..\..\..\Shared\OnderCode.Data\OnderCode.Data.csproj" />
+  </ItemGroup>
+</Project>

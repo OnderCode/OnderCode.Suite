@@ -1,0 +1,21 @@
+@page "/biletim"
+@inject NavigationManager Nav
+<PageTitle>Biletim</PageTitle>
+<section class="cine-wrap" style="max-width:520px;padding-top:60px;padding-bottom:80px">
+    <OndaCard Title="Biletimi bul" Subtitle="Satın alırken verilen 8 haneli kodu yazın (ör. K7P2-QX9D)." Icon="ticket-confirmation-outline">
+        <div class="o-col">
+            <OndaTextBox Label="Bilet kodu" Placeholder="XXXX-XXXX" @bind-Value="_code" Immediate="true" Icon="barcode" OnEnter="Go" />
+            <OndaButton Text="Bileti göster" Icon="arrow-right" Kind="OndaButtonKind.Primary" Block="true" OnClick="Go" Disabled="@string.IsNullOrWhiteSpace(_code)" />
+        </div>
+    </OndaCard>
+</section>
+
+@code {
+    string? _code;
+
+    void Go()
+    {
+        var c = TicketCode.Normalize(_code);
+        if (c.Length == 9) Nav.NavigateTo($"/bilet/{c}");
+    }
+}

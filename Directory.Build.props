@@ -17,5 +17,7 @@
     <Version>0.1.0</Version>
     <!-- Arayüz bileşenleri: Onda. Varsayılan olarak bu klasörün yanındaki Onda deposundan derlenir. -->
     <OndaProject Condition="'$(OndaProject)' == ''">$(MSBuildThisFileDirectory)..\Onda\src\Onda.WinForms\Onda.WinForms.csproj</OndaProject>
+    <!-- Web arayüzü bileşenleri: Onda.Web (aynı Onda deposunda). -->
+    <OndaWebProject Condition="'$(OndaWebProject)' == ''">$(MSBuildThisFileDirectory)..\Onda\src\Onda.Web\Onda.Web.csproj</OndaWebProject>
   </PropertyGroup>
 </Project>

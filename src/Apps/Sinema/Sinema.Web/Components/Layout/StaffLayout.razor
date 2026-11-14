@@ -1,0 +1,69 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject PageInfo Info
+@inject ISender Sender
+<PageTitle>@(Info.Title ?? "Yönetim") · @_name</PageTitle>
+<CascadingAuthenticationState>
+    <AuthorizeView>
+        <Authorized>
+            <OndaShell Title="@_name" Subtitle="@($"{_branch} · Yönetim")" BrandMark="◉" Items="@MenuFor(context.User)" PageTitle="@Info.Title" PageSubtitle="@Info.Subtitle"
+                       UserName="@context.User.Identity?.Name" UserRole="@RoleText(context.User)">
+                <UserActions>
+                    <OndaButton Icon="logout" Kind="OndaButtonKind.Ghost" Size="OndaSize.Small" Title="Çıkış" Href="/cikis" />
+                </UserActions>
+                <TopActions>@Info.Actions</TopActions>
+                <ChildContent>@Body</ChildContent>
+            </OndaShell>
+        </Authorized>
+        <NotAuthorized>@Body</NotAuthorized>
+    </AuthorizeView>
+</CascadingAuthenticationState>
+<OndaToastHost />
+
+@code {
+    string _name = "OnderCode Sinema", _branch = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Info.Changed += Refresh;
+        var r = await Sender.SendAsync(new GetCinemaName());
+        if (r.IsSuccess) (_name, _branch) = r.Value;
+    }
+
+    void Refresh() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Info.Changed -= Refresh;
+
+    static string RoleText(System.Security.Claims.ClaimsPrincipal user) =>
+        user.IsInRole(nameof(StaffRole.Manager)) ? "Yönetici" : user.IsInRole(nameof(StaffRole.BoxOffice)) ? "Gişe ve büfe" : "Kapı görevlisi";
+
+    static IReadOnlyList<OndaMenuItem> MenuFor(System.Security.Claims.ClaimsPrincipal user)
+    {
+        if (user.IsInRole(nameof(StaffRole.Manager)))
+        {
+            return
+            [
+                OndaMenuItem.Group("Genel"),
+                new("Gösterge", "view-dashboard-outline", "/yonetim", Exact: true),
+                new("Satışlar", "receipt-text-outline", "/yonetim/satislar"),
+                new("Raporlar", "chart-box-outline", "/yonetim/raporlar"),
+                OndaMenuItem.Group("Program"),
+                new("Filmler", "filmstrip", "/yonetim/filmler"),
+                new("Seanslar", "calendar-clock", "/yonetim/seanslar"),
+                new("Salonlar", "seat-outline", "/yonetim/salonlar"),
+                OndaMenuItem.Group("İşletme"),
+                new("Fiyatlar", "tag-outline", "/yonetim/fiyatlar"),
+                new("Büfe", "popcorn", "/yonetim/bufe"),
+                new("Personel", "account-group-outline", "/yonetim/personel"),
+                new("Ayarlar", "cog-outline", "/yonetim/ayarlar"),
+                OndaMenuItem.Group("Ekranlar"),
+                new("Gişe", "ticket-confirmation-outline", "/gise"),
+                new("Kapı kontrol", "qrcode-scan", "/kapi"),
+                new("Müşteri sitesi", "web", "/", Exact: true),
+            ];
+        }
+        if (user.IsInRole(nameof(StaffRole.BoxOffice)))
+            return [new("Gişe", "ticket-confirmation-outline", "/gise"), new("Satışlar", "receipt-text-outline", "/yonetim/satislar"), new("Müşteri sitesi", "web", "/", Exact: true)];
+        return [new("Kapı kontrol", "qrcode-scan", "/kapi"), new("Müşteri sitesi", "web", "/", Exact: true)];
+    }
+}

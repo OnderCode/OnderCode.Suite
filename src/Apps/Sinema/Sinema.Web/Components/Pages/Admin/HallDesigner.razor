@@ -1,0 +1,123 @@
+@page "/yonetim/salonlar/{Key}"
+@attribute [Authorize(Roles = Roles.Manager)]
+@inject ISender Sender
+@inject OndaToastService Toast
+@inject NavigationManager Nav
+<PageHeader Title="@(_id is null ? "Yeni salon" : _name)" Subtitle="Salon tasarımcısı: aracı seçin, koltukların üzerinde basılı tutup sürükleyin">
+    <Actions>
+        <OndaButton Text="Salonlar" Icon="arrow-left" Kind="OndaButtonKind.Ghost" Href="/yonetim/salonlar" />
+        <OndaButton Text="Kaydet" Icon="content-save-outline" Kind="OndaButtonKind.Primary" Busy="_busy" OnClick="SaveAsync" />
+    </Actions>
+</PageHeader>
+
+<div class="designer">
+    <div class="o-col">
+        <OndaCard Title="Salon bilgileri" Icon="information-outline">
+            <div class="o-col">
+                <OndaTextBox Label="Salon adı" @bind-Value="_name" Required="true" Error="@_nameError" />
+                <OndaTextBox Label="Özellikler" @bind-Value="_features" Placeholder="Dolby Atmos · Lazer" />
+                <OndaSwitch Text="3D gösterim yapılabilir" @bind-Value="_3d" />
+                <OndaSwitch Text="Kullanımda" @bind-Value="_active" />
+            </div>
+        </OndaCard>
+        <OndaCard Title="Araçlar" Icon="brush-outline">
+            <div class="tools">
+                @foreach (var (ch, text, css) in Tools)
+                {
+                    var tool = ch;
+                    <button type="button" class="tool @(_tool == tool ? "on" : "")" @onclick="() => _tool = tool"><i class="seat @css"></i>@text</button>
+                }
+            </div>
+            <div class="o-small o-muted" style="margin-top:10px">Sıra numarasına tıklamak bütün sırayı seçili araçla doldurur.</div>
+        </OndaCard>
+        <OndaCard Title="Boyut ve şablon" Icon="resize">
+            <div class="o-col">
+                <div class="o-grid o-grid-2">
+                    <OndaNumberBox TValue="int" Label="Sıra" @bind-Value="_rows" />
+                    <OndaNumberBox TValue="int" Label="Sütun" @bind-Value="_cols" />
+                </div>
+                <OndaButton Text="Boyutu uygula" Icon="resize" Kind="OndaButtonKind.Outline" Block="true" OnClick="Resize" />
+                <hr class="o-divider" />
+                @foreach (var t in HallLayout.Templates)
+                {
+                    var tmpl = t;
+                    <OndaButton Text="@tmpl.Name" Icon="view-grid-outline" Kind="OndaButtonKind.Ghost" Block="true" Class="left" OnClick="() => Apply(tmpl.Layout)" />
+                }
+            </div>
+        </OndaCard>
+    </div>
+    <div class="o-col">
+        <div class="o-grid o-grid-4">
+            <OndaStatCard Title="Kapasite" Value="@_layout.Capacity.ToString()" Icon="seat-outline" />
+            <OndaStatCard Title="VIP" Value="@_layout.Count(SeatType.Vip).ToString()" Icon="crown-outline" Tone="OndaTone.Warning" />
+            <OndaStatCard Title="Çift koltuk" Value="@_layout.Count(SeatType.Couple).ToString()" Icon="sofa-outline" Tone="OndaTone.Danger" />
+            <OndaStatCard Title="Engelli" Value="@_layout.Count(SeatType.Accessible).ToString()" Icon="wheelchair-accessibility" Tone="OndaTone.Info" />
+        </div>
+        <OndaCard Flush="true">
+            <div class="designer-canvas" data-theme="dark">
+                <SeatMap Layout="_layout" Design="true" OnCellClick="Paint" OnRowClick="FillRow" />
+            </div>
+        </OndaCard>
+        @if (_warning is not null) { <div class="notice warn"><OndaIcon Name="alert-outline" />@_warning</div> }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Key { get; set; } = "";
+
+    static readonly (char Ch, string Text, string Css)[] Tools = [('S', "Standart", "free"), ('V', "VIP", "vip free"), ('C', "Çift koltuk", "couple free"), ('E', "Engelli", "accessible free"), ('.', "Boşluk / koridor", "empty")];
+
+    int? _id;
+    string? _name, _features, _nameError, _warning;
+    bool _3d, _active = true, _busy;
+    char _tool = 'S';
+    int _rows = 10, _cols = 14;
+    HallLayout _layout = HallLayout.Parse(HallLayout.Templates[1].Layout);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (int.TryParse(Key, out var id))
+        {
+            var r = await Sender.SendAsync(new ListHalls());
+            var h = r.IsSuccess ? r.Value.FirstOrDefault(x => x.Id == id) : null;
+            if (h is null) { Nav.NavigateTo("/yonetim/salonlar"); return; }
+            _id = h.Id; _name = h.Name; _features = h.Features; _3d = h.Supports3D; _active = h.IsActive;
+            _layout = h.Parsed;
+            if (h.UpcomingSessions > 0) _warning = $"Bu salonda {h.UpcomingSessions} ileri tarihli seans var. Satılmış bir koltuğu kaldırırsanız kayıt engellenir.";
+        }
+        else _name = "Salon " + DateTime.Now.ToString("mmss");
+        _rows = _layout.Rows;
+        _cols = _layout.Cols;
+    }
+
+    void Paint((int Row, int Col) cell) => _layout = _layout.With(cell.Row, cell.Col, _tool);
+
+    void FillRow(int row) => _layout = _layout.FillRow(row, _tool);
+
+    void Resize()
+    {
+        try { _layout = _layout.Resize(_rows, _cols); }
+        catch (DomainException ex) { Toast.Error(ex.Message); }
+    }
+
+    void Apply(string layout)
+    {
+        _layout = HallLayout.Parse(layout);
+        _rows = _layout.Rows;
+        _cols = _layout.Cols;
+    }
+
+    async Task SaveAsync()
+    {
+        _nameError = string.IsNullOrWhiteSpace(_name) ? "Salon adı gerekli." : null;
+        if (_nameError is not null) return;
+        if (_layout.Capacity == 0) { Toast.Error("Salonda en az bir koltuk olmalı."); return; }
+        _busy = true;
+        var r = await Sender.SendAsync(new SaveHall(_id, _name!, _layout.ToString(), _features, _3d, _active));
+        _busy = false;
+        if (!r.IsSuccess) { Toast.Error(r.ErrorMessage); return; }
+        Toast.Success($"{_name} kaydedildi · {_layout.Capacity} koltuk.");
+        if (_id is null) Nav.NavigateTo($"/yonetim/salonlar/{r.Value}");
+        _id = r.Value;
+    }
+}

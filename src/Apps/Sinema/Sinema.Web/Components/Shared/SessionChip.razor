@@ -1,0 +1,16 @@
+@* Seans saati düğmesi: saat, salon, format; doluluğa göre renk. *@
+<a class="chip @(Closed ? "closed" : "") @(Session.Occupancy >= 0.85 ? "hot" : "")" href="@(Closed ? null : $"/seans/{Session.Id}")" title="@Tip">
+    <b>@Session.Start.ToString("HH:mm")</b>
+    <small>@Session.HallName · @Session.FormatText @Session.LanguageText</small>
+    <span class="chip-bar"><span style="width:@((Session.Occupancy * 100).ToString("0", CultureInfo.InvariantCulture))%"></span></span>
+</a>
+
+@code {
+    [Parameter, EditorRequired] public SessionRow Session { get; set; } = null!;
+    [Parameter] public int CloseMinutes { get; set; } = 15;
+    [Parameter] public DateTime Now { get; set; } = DateTime.Now;
+
+    bool Closed => Now > Session.Start.AddMinutes(-CloseMinutes) || Session.Free == 0;
+
+    string Tip => Session.Free == 0 ? "Tükendi" : Closed ? "Online satış kapandı, gişeden alabilirsiniz" : $"{Session.Free} boş koltuk";
+}

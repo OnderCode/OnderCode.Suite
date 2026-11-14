@@ -1,0 +1,104 @@
+@page "/yonetim/raporlar"
+@attribute [Authorize(Roles = Roles.Manager)]
+@inject ISender Sender
+@inject TimeProvider Time
+<PageHeader Title="Raporlar" Subtitle="@(_r is null ? "" : $"{_r.From:d MMMM} – {_r.To:d MMMM yyyy}")">
+    <Actions><OndaSegmented Items="_ranges" Value="_days" ValueChanged="@(async (int v) => { _days = v; await LoadAsync(); })" /></Actions>
+</PageHeader>
+
+@if (_r is null) { <div class="o-empty">Hazırlanıyor…</div> return; }
+
+<div class="o-grid o-grid-4">
+    <OndaStatCard Title="Seyirci" Value="@_r.Tickets.ToString("N0")" Icon="account-group-outline" Note="@($"{_r.Daily.Sum(d => d.Sessions):N0} seans")" Spark="@_r.Daily.Select(d => (double)d.Tickets).ToList()" />
+    <OndaStatCard Title="Bilet cirosu" Value="@Texts.MoneyShort(_r.TicketRevenue)" Icon="ticket-outline" Tone="OndaTone.Success" Note="@($"ort. bilet {Texts.MoneyShort(_r.Tickets == 0 ? 0 : _r.TicketRevenue / _r.Tickets)}")" Spark="@_r.Daily.Select(d => (double)d.TicketRevenue).ToList()" />
+    <OndaStatCard Title="Büfe cirosu" Value="@Texts.MoneyShort(_r.ConcessionRevenue)" Icon="popcorn" Tone="OndaTone.Warning" Note="@($"kişi başı {Texts.Money(_r.SpendPerHead)}")" />
+    <OndaStatCard Title="Ortalama doluluk" Value="@OndaFormat.Percent(_r.Occupancy)" Icon="seat-outline" Tone="OndaTone.Info" Note="@($"{_r.Refunds} iade")" />
+</div>
+
+<div class="o-grid o-grid-3" style="margin-top:16px">
+    <OndaCard Title="Günlük ciro" Subtitle="Bilet ve büfe" Class="o-span-2">
+        <OndaChart Kind="OndaChartKind.Area" Labels="@_r.Daily.Select(d => d.Day.ToString("dd.MM")).ToList()" LabelEvery="@(_r.Daily.Count > 14 ? 3 : 1)" Height="250"
+                   Series="@([new OndaSeries("Bilet", _r.Daily.Select(d => (double)d.TicketRevenue).ToList()), new OndaSeries("Büfe", _r.Daily.Select(d => (double)d.ConcessionRevenue).ToList(), "#F59E0B")])" />
+    </OndaCard>
+    <OndaCard Title="Bilet türleri" Subtitle="Satılan bilet sayısı">
+        <OndaDonut Slices="@_r.TicketTypes.Select((t, i) => new OndaSlice(t.Name, t.Tickets, Palette[i % Palette.Length])).ToList()" Center="@_r.Tickets.ToString("N0")" Caption="bilet" Size="150" />
+        <hr class="o-divider" style="margin:14px 0" />
+        <OndaDonut Slices="@([new OndaSlice("Gişe", _r.BoxOfficeTickets, "#64748B"), new OndaSlice("Online", _r.OnlineTickets, "#3B82F6")])" Center="@OndaFormat.Percent(_r.Tickets == 0 ? 0 : _r.OnlineTickets / (double)_r.Tickets)" Caption="online" Size="110" CenterSize="13" />
+    </OndaCard>
+</div>
+
+<div class="o-grid o-grid-3" style="margin-top:16px">
+    <OndaCard Title="Yoğunluk haritası" Subtitle="Gün ve saat dilimine göre ortalama doluluk" Class="o-span-2">
+        <div class="heat">
+            <div></div>
+            @foreach (var slot in _r.SlotNames) { <div class="heat-h">@slot</div> }
+            @for (var d = 0; d < 7; d++)
+            {
+                var day = d;
+                <div class="heat-d">@DayNames[day]</div>
+                for (var k = 0; k < _r.SlotNames.Count; k++)
+                {
+                    var v = _r.Heatmap[day, k];
+                    <div class="heat-c" style="@(v < 0 ? "" : $"background:color-mix(in srgb, var(--o-primary) {(int)(v * 100)}%, var(--o-surface-alt));color:{(v > .55 ? "#fff" : "var(--o-text)")}")" title="@(v < 0 ? "seans yok" : OndaFormat.Percent(v))">@(v < 0 ? "–" : OndaFormat.Percent(v))</div>
+                }
+            }
+        </div>
+    </OndaCard>
+    <OndaCard Title="Ödeme" Subtitle="Tahsilat dağılımı">
+        <OndaDonut Slices="@([new OndaSlice("Kart", (double)_r.CardRevenue, "#8B5CF6"), new OndaSlice("Nakit", (double)_r.CashRevenue, "#22C55E"), new OndaSlice("Online", (double)_r.OnlineRevenue, "#3B82F6")])"
+                   Center="@Texts.MoneyShort(_r.CardRevenue + _r.CashRevenue + _r.OnlineRevenue)" Size="140" CenterSize="11" ValueFormat="@(v => Texts.MoneyShort((decimal)v))" />
+    </OndaCard>
+</div>
+
+<div style="margin-top:16px" class="o-col">
+    <OndaGrid Items="_r.Films" Title="Film performansı" ExportName="Film performansı" ExportAccent="E11D48" PageSize="0">
+        <OndaGridColumn TItem="FilmReportRow" Title="Film" Value="f => f.Title" />
+        <OndaGridColumn TItem="FilmReportRow" Title="Seans" Value="f => f.Sessions" Kind="OndaColumnKind.Number" Width="80px" Total="true" />
+        <OndaGridColumn TItem="FilmReportRow" Title="Seyirci" Value="f => f.Tickets" Kind="OndaColumnKind.Number" Width="90px" Total="true" />
+        <OndaGridColumn TItem="FilmReportRow" Title="Ort. bilet" Value="f => f.AveragePrice" Kind="OndaColumnKind.Money" Width="110px" />
+        <OndaGridColumn TItem="FilmReportRow" Title="Doluluk" Value="f => f.Occupancy" Kind="OndaColumnKind.Progress" Width="160px" Tone="@(f => f.Occupancy > .5 ? OndaTone.Success : f.Occupancy > .25 ? OndaTone.Warning : OndaTone.Danger)" />
+        <OndaGridColumn TItem="FilmReportRow" Title="Ciro payı" Value="f => f.Share" Kind="OndaColumnKind.Percent" Width="100px" />
+        <OndaGridColumn TItem="FilmReportRow" Title="Ciro" Value="f => f.Revenue" Kind="OndaColumnKind.Money" Width="130px" Total="true" />
+    </OndaGrid>
+    <div class="o-grid o-grid-2">
+        <OndaGrid Items="_r.Halls" Title="Salonlar" ExportName="Salon doluluğu" ExportAccent="E11D48" Searchable="false" PageSize="0">
+            <OndaGridColumn TItem="HallReportRow" Title="Salon" Value="h => h.Hall" />
+            <OndaGridColumn TItem="HallReportRow" Title="Seans" Value="h => h.Sessions" Kind="OndaColumnKind.Number" Width="80px" />
+            <OndaGridColumn TItem="HallReportRow" Title="Seyirci" Value="h => h.Tickets" Kind="OndaColumnKind.Number" Width="90px" Total="true" />
+            <OndaGridColumn TItem="HallReportRow" Title="Doluluk" Value="h => h.Occupancy" Kind="OndaColumnKind.Progress" Width="150px" />
+            <OndaGridColumn TItem="HallReportRow" Title="Ciro" Value="h => h.Revenue" Kind="OndaColumnKind.Money" Width="120px" Total="true" />
+        </OndaGrid>
+        <OndaGrid Items="_r.Concessions" Title="Büfe ürünleri" ExportName="Büfe satışları" ExportAccent="E11D48" Searchable="false" PageSize="8">
+            <OndaGridColumn TItem="ConcessionReportRow" Title="Ürün" Value="c => c.Name" />
+            <OndaGridColumn TItem="ConcessionReportRow" Title="Kategori" Value="c => c.Category" Width="110px" />
+            <OndaGridColumn TItem="ConcessionReportRow" Title="Adet" Value="c => c.Quantity" Kind="OndaColumnKind.Number" Width="80px" Total="true" />
+            <OndaGridColumn TItem="ConcessionReportRow" Title="Ciro" Value="c => c.Revenue" Kind="OndaColumnKind.Money" Width="120px" Total="true" />
+        </OndaGrid>
+    </div>
+    <OndaGrid Items="_r.Daily" Title="Günlük döküm" ExportName="Günlük döküm" ExportAccent="E11D48" Searchable="false" PageSize="0" Dense="true">
+        <OndaGridColumn TItem="DailyRow" Title="Gün" Value="d => d.DayText" Width="110px" />
+        <OndaGridColumn TItem="DailyRow" Title="Seans" Value="d => d.Sessions" Kind="OndaColumnKind.Number" Total="true" />
+        <OndaGridColumn TItem="DailyRow" Title="Seyirci" Value="d => d.Tickets" Kind="OndaColumnKind.Number" Total="true" />
+        <OndaGridColumn TItem="DailyRow" Title="Doluluk" Value="d => d.Occupancy" Kind="OndaColumnKind.Progress" Width="160px" />
+        <OndaGridColumn TItem="DailyRow" Title="Bilet" Value="d => d.TicketRevenue" Kind="OndaColumnKind.Money" Total="true" />
+        <OndaGridColumn TItem="DailyRow" Title="Büfe" Value="d => d.ConcessionRevenue" Kind="OndaColumnKind.Money" Total="true" />
+        <OndaGridColumn TItem="DailyRow" Title="Toplam" Value="d => d.Total" Kind="OndaColumnKind.Money" Total="true" />
+    </OndaGrid>
+</div>
+
+@code {
+    ReportView? _r;
+    int _days = 14;
+    static readonly string[] Palette = ["#E11D48", "#3B82F6", "#F59E0B", "#14B8A6", "#8B5CF6", "#64748B"];
+    static readonly string[] DayNames = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
+    readonly IReadOnlyList<OndaOption<int>> _ranges = [new(7, "7 gün"), new(14, "14 gün"), new(21, "21 gün")];
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    async Task LoadAsync()
+    {
+        var today = DateOnly.FromDateTime(Time.GetLocalNow().DateTime);
+        var r = await Sender.SendAsync(new GetReport(today.AddDays(-_days + 1), today));
+        if (r.IsSuccess) _r = r.Value;
+    }
+}

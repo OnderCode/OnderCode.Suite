@@ -1,0 +1,228 @@
+@page "/yonetim/seanslar"
+@attribute [Authorize(Roles = Roles.Manager)]
+@inject ISender Sender
+@inject OndaToastService Toast
+@inject TimeProvider Time
+@inject NavigationManager Nav
+<PageHeader Title="Seanslar" Subtitle="@($"{_day.ToString("d MMMM yyyy dddd", Texts.Turkish)} · {_sessions.Count} seans · {_sessions.Sum(s => s.Sold):N0} bilet")">
+    <Actions><OndaButton Text="Seans ekle" Icon="plus" Kind="OndaButtonKind.Primary" OnClick="() => OpenNew(null, null)" /></Actions>
+</PageHeader>
+
+<div class="o-row" style="margin-bottom:14px">
+    <OndaButton Icon="chevron-left" Kind="OndaButtonKind.Outline" OnClick="() => MoveAsync(-1)" Title="Önceki gün" />
+    <div class="week-strip">
+        @for (var i = -1; i < 7; i++)
+        {
+            var d = _today.AddDays(i);
+            <button class="day-tab small @(d == _day ? "on" : "")" @onclick="() => GoAsync(d)"><small>@(d == _today ? "Bugün" : Texts.DayShort(d))</small><b>@d.Day</b></button>
+        }
+    </div>
+    <OndaButton Icon="chevron-right" Kind="OndaButtonKind.Outline" OnClick="() => MoveAsync(1)" Title="Sonraki gün" />
+    <OndaDateBox Value="_day" ValueChanged="@(async (DateOnly? d) => { if (d is { } x) await GoAsync(x); })" Style="width:170px" />
+    <div class="o-spacer"></div>
+    <div class="o-legend"><span><i style="background:var(--o-success)"></i>%50 altı</span><span><i style="background:var(--o-warning)"></i>%50–80</span><span><i style="background:var(--o-danger)"></i>%80+ doluluk</span></div>
+</div>
+
+<div class="o-card timeline">
+    <div class="tl-head">
+        <div class="tl-hall"></div>
+        <div class="tl-hours">
+            @for (var h = StartHour; h < EndHour; h++) { <span style="left:@Pct(h * 60.0)">@((h % 24).ToString("00")):00</span> }
+        </div>
+    </div>
+    @foreach (var hall in _halls.Where(h => h.IsActive))
+    {
+        var mine = _sessions.Where(s => s.HallId == hall.Id).ToList();
+        <div class="tl-row">
+            <div class="tl-hall"><b>@hall.Name</b><small>@hall.Capacity koltuk@(hall.Supports3D ? " · 3D" : "")</small></div>
+            <div class="tl-track" @onclick="e => TrackClick(hall, e)">
+                @for (var h = StartHour; h < EndHour; h++) { <i class="tl-grid" style="left:@Pct(h * 60.0)"></i> }
+                @if (_day == _today) { <i class="tl-now" style="left:@Pct(MinutesOf(_now))"></i> }
+                @foreach (var s in mine)
+                {
+                    var sess = s;
+                    <div class="tl-block @(s.Occupancy >= .8 ? "hot" : s.Occupancy >= .5 ? "warm" : "") @(s.End < _now ? "past" : "")" style="left:@Pct(MinutesOf(s.Start));width:@PctW(s.Start, s.End);--accent:@s.Accent"
+                         title="@($"{s.FilmTitle} · {s.Start:HH:mm}–{s.End:HH:mm} · {s.Sold}/{s.Capacity}")" @onclick="() => _selected = sess" @onclick:stopPropagation="true">
+                        <b>@s.FilmTitle</b>
+                        <small>@s.Start.ToString("HH:mm") · @s.FormatText @s.LanguageText · @s.Sold/@s.Capacity</small>
+                        <span class="tl-fill" style="width:@((s.Occupancy * 100).ToString("0", CultureInfo.InvariantCulture))%"></span>
+                    </div>
+                    <div class="tl-clean" style="left:@Pct(MinutesOf(s.End));width:@PctW(s.End, s.ReadyAt)" title="Temizlik"></div>
+                }
+            </div>
+        </div>
+    }
+</div>
+<div class="o-small o-muted" style="margin-top:8px">Boş bir alana tıklayarak o salona o saatten seans ekleyebilirsiniz. Taralı alanlar salon temizliğidir.</div>
+
+<OndaModal Open="@(_selected is not null)" OpenChanged="@(o => { if (!o) _selected = null; })" Title="@_selected?.FilmTitle" Subtitle="@($"{_selected?.HallName} · {_selected?.Start:d MMMM dddd HH:mm}")" Icon="calendar-clock">
+    <ChildContent>
+        @if (_selected is { } sel)
+        {
+            <div class="o-grid o-grid-3">
+                <OndaStatCard Title="Satılan" Value="@($"{sel.Sold}/{sel.Capacity}")" Icon="ticket-outline" />
+                <OndaStatCard Title="Doluluk" Value="@OndaFormat.Percent(sel.Occupancy)" Icon="seat-outline" Tone="OndaTone.Warning" />
+                <OndaStatCard Title="Ciro" Value="@Texts.MoneyShort(sel.Revenue)" Icon="cash" Tone="OndaTone.Success" />
+            </div>
+            <div class="o-muted" style="margin-top:12px">@sel.FormatText · @Texts.Of(sel.Language) · bitiş @sel.End.ToString("HH:mm") · salon @sel.ReadyAt.ToString("HH:mm")'de hazır</div>
+        }
+    </ChildContent>
+    <Footer>
+        <OndaButton Text="Seansı iptal et" Icon="cancel" Kind="OndaButtonKind.Danger" Disabled="@(_selected?.End < _now)" OnClick="() => _confirmCancel = true" />
+        <div class="o-spacer"></div>
+        <OndaButton Text="Müşteri sayfası" Icon="web" Kind="OndaButtonKind.Ghost" Href="@($"/seans/{_selected?.Id}")" Target="_blank" />
+        <OndaButton Text="Gişede aç" Icon="ticket-confirmation-outline" Kind="OndaButtonKind.Primary" Href="@($"/gise?seans={_selected?.Id}")" />
+    </Footer>
+</OndaModal>
+
+<OndaModal @bind-Open="_confirmCancel" Title="Seans iptal edilsin mi?" Icon="alert-outline" Size="sm">
+    <ChildContent>Bu seansın bütün satışları iade edilir ve koltuklar kapatılır. Bu işlem geri alınamaz.</ChildContent>
+    <Footer>
+        <OndaButton Text="Vazgeç" Kind="OndaButtonKind.Ghost" OnClick="() => _confirmCancel = false" />
+        <OndaButton Text="İptal et ve iade et" Kind="OndaButtonKind.Danger" OnClick="CancelAsync" />
+    </Footer>
+</OndaModal>
+
+<OndaModal @bind-Open="_newOpen" Title="Seans ekle" Subtitle="Bitiş saati reklam ve film süresinden hesaplanır; çakışma ve temizlik kontrol edilir" Icon="calendar-plus" Size="lg">
+    <ChildContent>
+        <div class="o-grid o-grid-2">
+            <OndaSelect TValue="int" Label="Film" Items="_filmOptions" @bind-Value="_nFilm" Placeholder="Film seçin" Required="true" />
+            <OndaSelect TValue="int" Label="Salon" Items="_hallOptions" @bind-Value="_nHall" Placeholder="Salon seçin" Required="true" />
+            <OndaDateBox Label="Tarih" @bind-Value="_nDate" Min="_today" />
+            <div class="o-row" style="align-items:flex-end;flex-wrap:nowrap">
+                <OndaTimeBox Label="Başlangıç" @bind-Value="_nTime" Style="flex:1" />
+                <OndaButton Text="İlk boş saat" Icon="auto-fix" Kind="OndaButtonKind.Soft" OnClick="SuggestAsync" Disabled="@(_nHall == 0)" />
+            </div>
+            <div class="o-field"><label class="o-label">Format</label><OndaSegmented Items="_formats" @bind-Value="_nFormat" Block="true" /></div>
+            <div class="o-field"><label class="o-label">Dil</label><OndaSegmented Items="_langs" @bind-Value="_nLang" Block="true" /></div>
+            <OndaNumberBox TValue="int" Label="Kaç gün tekrarlansın" @bind-Value="_nRepeat" Suffix="gün" Help="Aynı saatte art arda günlere de açar" />
+            <div class="o-field">
+                <label class="o-label">Önizleme</label>
+                <div class="preview-box">@Preview</div>
+            </div>
+        </div>
+        @if (_newErrors.Count > 0)
+        {
+            <div class="notice warn" style="margin-top:12px"><OndaIcon Name="alert-outline" /><div>@foreach (var e in _newErrors) { <div>@e.Message</div> }</div></div>
+        }
+    </ChildContent>
+    <Footer>
+        <OndaButton Text="Vazgeç" Kind="OndaButtonKind.Ghost" OnClick="() => _newOpen = false" />
+        <OndaButton Text="Seansı aç" Icon="check" Kind="OndaButtonKind.Primary" Busy="_busy" OnClick="CreateAsync" />
+    </Footer>
+</OndaModal>
+
+@code {
+    [SupplyParameterFromQuery(Name = "yeni")] public int? NewParam { get; set; }
+    const int StartHour = 10, EndHour = 26;
+
+    DateOnly _today, _day;
+    DateTime _now;
+    IReadOnlyList<SessionRow> _sessions = [];
+    IReadOnlyList<HallRow> _halls = [];
+    IReadOnlyList<FilmRow> _films = [];
+    SessionRow? _selected;
+    bool _confirmCancel, _newOpen, _busy;
+    IReadOnlyList<Error> _newErrors = [];
+
+    int _nFilm, _nHall, _nRepeat = 1;
+    DateOnly? _nDate;
+    TimeOnly? _nTime = new(20, 0);
+    SessionFormat _nFormat;
+    SessionLanguage _nLang;
+
+    IReadOnlyList<OndaOption<int>> _filmOptions = [], _hallOptions = [];
+    readonly IReadOnlyList<OndaOption<SessionFormat>> _formats = [new(SessionFormat.TwoD, "2D"), new(SessionFormat.ThreeD, "3D")];
+    readonly IReadOnlyList<OndaOption<SessionLanguage>> _langs = [new(SessionLanguage.Dubbed, "Dublaj"), new(SessionLanguage.Subtitled, "Altyazılı")];
+
+    protected override async Task OnInitializedAsync()
+    {
+        _now = Time.GetLocalNow().DateTime;
+        _today = DateOnly.FromDateTime(_now);
+        _day = _today;
+        var h = await Sender.SendAsync(new ListHalls());
+        if (h.IsSuccess) _halls = h.Value;
+        var f = await Sender.SendAsync(new ListFilms(false));
+        if (f.IsSuccess) _films = f.Value;
+        _filmOptions = _films.Select(x => new OndaOption<int>(x.Id, $"{x.Title} ({x.DurationMinutes} dk)")).ToList();
+        _hallOptions = _halls.Where(x => x.IsActive).Select(x => new OndaOption<int>(x.Id, $"{x.Name} · {x.Capacity} koltuk{(x.Supports3D ? " · 3D" : "")}")).ToList();
+        await LoadAsync();
+        if (NewParam == 1) OpenNew(null, null);
+    }
+
+    async Task LoadAsync()
+    {
+        var r = await Sender.SendAsync(new ListSessions(_day, _day));
+        if (r.IsSuccess) _sessions = r.Value;
+    }
+
+    async Task GoAsync(DateOnly d) { _day = d; await LoadAsync(); }
+
+    Task MoveAsync(int days) => GoAsync(_day.AddDays(days));
+
+    double MinutesOf(DateTime t) => (t - _day.ToDateTime(new TimeOnly(0, 0))).TotalMinutes;
+
+    static string Pct(double minutes) => (Math.Clamp((minutes - StartHour * 60) / ((EndHour - StartHour) * 60.0), 0, 1) * 100).ToString("0.###", CultureInfo.InvariantCulture) + "%";
+
+    string PctW(DateTime a, DateTime b) => ((b - a).TotalMinutes / ((EndHour - StartHour) * 60.0) * 100).ToString("0.###", CultureInfo.InvariantCulture) + "%";
+
+    void TrackClick(HallRow hall, MouseEventArgs e)
+    {
+        // Tıklanan yerin saatini kabaca bulmak için tarayıcı ölçüsü gerekmez: en yakın boş saati öner
+        OpenNew(hall.Id, null);
+        _ = SuggestAsync();
+    }
+
+    void OpenNew(int? hallId, TimeOnly? time)
+    {
+        _nHall = hallId ?? _nHall;
+        _nDate = _day < _today ? _today : _day;
+        if (time is not null) _nTime = time;
+        _newErrors = [];
+        _newOpen = true;
+    }
+
+    async Task SuggestAsync()
+    {
+        if (_nHall == 0 || _nDate is null) return;
+        var r = await Sender.SendAsync(new SuggestSessionStart(_nHall, _nDate.Value));
+        if (r.IsSuccess) _nTime = r.Value;
+        StateHasChanged();
+    }
+
+    string Preview
+    {
+        get
+        {
+            var f = _films.FirstOrDefault(x => x.Id == _nFilm);
+            if (f is null || _nTime is null) return "Film ve saat seçin.";
+            var start = _nTime.Value;
+            var end = start.AddMinutes(15 + f.DurationMinutes);
+            return $"{start:HH:mm} reklam · {start.AddMinutes(15):HH:mm} film başlar · {end:HH:mm} biter · salon {end.AddMinutes(15):HH:mm}'de hazır";
+        }
+    }
+
+    async Task CreateAsync()
+    {
+        if (_nFilm == 0 || _nHall == 0 || _nDate is null || _nTime is null) { Toast.Warning("Film, salon, tarih ve saat seçin."); return; }
+        _busy = true;
+        var r = await Sender.SendAsync(new CreateSessions(_nFilm, _nHall, _nDate.Value, _nTime.Value, _nFormat, _nLang, Math.Max(1, _nRepeat)));
+        _busy = false;
+        if (!r.IsSuccess) { _newErrors = r.Errors; return; }
+        Toast.Success($"{r.Value} seans açıldı.");
+        _newOpen = false;
+        _day = _nDate.Value;
+        await LoadAsync();
+    }
+
+    async Task CancelAsync()
+    {
+        if (_selected is null) return;
+        var r = await Sender.SendAsync(new CancelSession(_selected.Id));
+        _confirmCancel = false;
+        if (!r.IsSuccess) { Toast.Error(r.ErrorMessage); return; }
+        Toast.Success(r.Value > 0 ? $"Seans iptal edildi, {r.Value} satış iade edildi." : "Seans iptal edildi.");
+        _selected = null;
+        await LoadAsync();
+    }
+}

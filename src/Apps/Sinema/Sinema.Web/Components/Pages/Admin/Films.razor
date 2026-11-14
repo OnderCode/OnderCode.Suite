@@ -1,0 +1,212 @@
+@page "/yonetim/filmler"
+@attribute [Authorize(Roles = Roles.Manager)]
+@inject ISender Sender
+@inject OndaToastService Toast
+<PageHeader Title="Filmler" Subtitle="@($"{_films.Count(f => f.Status == FilmStatus.NowShowing)} vizyonda · {_films.Count(f => f.Status == FilmStatus.ComingSoon)} yakında")">
+    <Actions><OndaButton Text="Yeni film" Icon="plus" Kind="OndaButtonKind.Primary" OnClick="New" /></Actions>
+</PageHeader>
+
+<div class="o-row" style="margin-bottom:16px">
+    <OndaSegmented Items="_filters" @bind-Value="_filter" />
+    <div class="o-spacer"></div>
+    <OndaTextBox Kind="OndaInputKind.Search" Placeholder="Film, yönetmen, oyuncu ara" @bind-Value="_search" Class="o-search" />
+</div>
+
+<div class="film-admin-grid">
+    @foreach (var f in Visible)
+    {
+        <div class="o-card film-admin" @onclick="() => Edit(f)">
+            <div class="film-admin-poster">
+                <Poster Src="@f.Poster" Alt="@f.Title" />
+                <span class="film-admin-status"><OndaBadge Text="@f.StatusText" Tone="@(f.Status == FilmStatus.NowShowing ? OndaTone.Success : f.Status == FilmStatus.ComingSoon ? OndaTone.Info : OndaTone.Neutral)" Solid="@(f.Status == FilmStatus.NowShowing)" /></span>
+                @if (f.IsFeatured) { <span class="film-admin-star" title="Ana sayfa vitrini"><OndaIcon Name="star" /></span> }
+            </div>
+            <div class="film-admin-body">
+                <div class="o-row" style="gap:6px;flex-wrap:nowrap"><b class="o-ellipsis">@f.Title</b><RatingBadge Rating="f.Rating" /></div>
+                <div class="o-small o-muted o-ellipsis">@f.Genres · @f.Duration</div>
+                <div class="o-row o-small" style="margin-top:6px;gap:12px">
+                    <span title="İleri tarihli seans"><OndaIcon Name="calendar-clock" /> @f.UpcomingSessions</span>
+                    <span title="Satılan bilet"><OndaIcon Name="ticket-outline" /> @f.TicketsSold.ToString("N0")</span>
+                    <span title="Ciro" class="o-strong">@Texts.MoneyShort(f.Revenue)</span>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+@if (!Visible.Any()) { <OndaEmpty Icon="filmstrip-off" Title="Film bulunamadı" /> }
+
+<OndaModal @bind-Open="_open" Title="@(_edit.Id is null ? "Yeni film" : _edit.Title)" Subtitle="Afiş, künye ve vizyon bilgileri" Icon="filmstrip" Size="xl">
+    <ChildContent>
+        <div class="film-form">
+            <div class="o-col">
+                <div class="poster-drop" style="--accent:@_edit.AccentColor">
+                    <Poster Src="@(_posterPreview ?? _edit.Poster)" Alt="Afiş" />
+                </div>
+                @if (_edit.Id is null)
+                {
+                    <div class="o-small o-muted">Afişi film kaydedildikten sonra yükleyebilirsiniz.</div>
+                }
+                else
+                {
+                    <label class="o-btn outline block" style="cursor:pointer">
+                        <OndaIcon Name="image-plus-outline" /> Afiş yükle
+                        <InputFile OnChange="UploadAsync" accept=".jpg,.jpeg,.png,.webp" style="display:none" />
+                    </label>
+                    <div class="o-small o-muted">JPG, PNG ya da WEBP · en fazla 4 MB · dikey (2:3) önerilir.</div>
+                }
+                <div class="o-field">
+                    <label class="o-label">Vurgu rengi</label>
+                    <div class="o-row"><input type="color" value="@_edit.AccentColor" @onchange="e => _edit.AccentColor = e.Value?.ToString()?.ToUpperInvariant() ?? _edit.AccentColor" class="color-input" /><span class="o-mono o-small">@_edit.AccentColor</span></div>
+                </div>
+            </div>
+            <div class="o-col">
+                <div class="o-grid o-grid-2">
+                    <OndaTextBox Label="Film adı" @bind-Value="_edit.Title" Required="true" Error="@Err("Title")" />
+                    <OndaTextBox Label="Orijinal adı" @bind-Value="_edit.OriginalTitle" Help="Yabancı filmlerde" />
+                </div>
+                <div class="o-field">
+                    <label class="o-label">Tür <span class="o-req">*</span></label>
+                    <div class="genre-chips">
+                        @foreach (var g in Genres.All)
+                        {
+                            var genre = g;
+                            <button type="button" class="genre @(_edit.GenreSet.Contains(genre) ? "on" : "")" @onclick="() => ToggleGenre(genre)">@genre</button>
+                        }
+                    </div>
+                    @if (Err("Genres") is { } ge) { <div class="o-error">@ge</div> }
+                </div>
+                <div class="o-grid o-grid-3">
+                    <OndaNumberBox TValue="int" Label="Süre" @bind-Value="_edit.Duration" Suffix="dk" Required="true" Error="@Err("DurationMinutes")" />
+                    <OndaSelect TValue="AgeRating" Label="Sınıflandırma" Items="_ratings" @bind-Value="_edit.Rating" />
+                    <OndaDateBox Label="Vizyon tarihi" @bind-Value="_edit.Release" />
+                </div>
+                <div class="o-grid o-grid-2">
+                    <OndaTextBox Label="Yönetmen" @bind-Value="_edit.Director" />
+                    <OndaTextBox Label="Ülke" @bind-Value="_edit.Country" />
+                </div>
+                <OndaTextBox Label="Oyuncular" @bind-Value="_edit.Cast" Help="Virgülle ayırın" />
+                <OndaTextBox Label="Özet" Kind="OndaInputKind.Multiline" Rows="4" @bind-Value="_edit.Synopsis" Error="@Err("Synopsis")" />
+                <div class="o-row" style="gap:18px">
+                    <OndaSegmented Items="_statuses" @bind-Value="_edit.Status" />
+                    <OndaSwitch Text="Ana sayfa vitrininde göster" @bind-Value="_edit.Featured" />
+                </div>
+            </div>
+        </div>
+    </ChildContent>
+    <Footer>
+        <OndaButton Text="Vazgeç" Kind="OndaButtonKind.Ghost" OnClick="() => _open = false" />
+        <OndaButton Text="Kaydet" Icon="content-save-outline" Kind="OndaButtonKind.Primary" Busy="_busy" OnClick="SaveAsync" />
+    </Footer>
+</OndaModal>
+
+@code {
+    sealed class FilmForm
+    {
+        public int? Id;
+        public string? Title, OriginalTitle, Director, Cast, Country, Synopsis;
+        public HashSet<string> GenreSet = [];
+        public int Duration = 110;
+        public AgeRating Rating = AgeRating.ThirteenPlus;
+        public DateOnly? Release;
+        public FilmStatus Status = FilmStatus.ComingSoon;
+        public bool Featured;
+        public string AccentColor = "#E11D48";
+        public string Poster = "posters/bos.svg";
+    }
+
+    List<FilmRow> _films = [];
+    FilmForm _edit = new();
+    bool _open, _busy;
+    string? _search, _posterPreview;
+    string _filter = "now";
+    IReadOnlyList<Error> _errors = [];
+
+    readonly IReadOnlyList<OndaOption<string>> _filters = [new("now", "Vizyonda"), new("soon", "Yakında"), new("archive", "Arşiv"), new("all", "Tümü")];
+    readonly IReadOnlyList<OndaOption<AgeRating>> _ratings = Enum.GetValues<AgeRating>().Select(r => new OndaOption<AgeRating>(r, Texts.Of(r))).ToList();
+    readonly IReadOnlyList<OndaOption<FilmStatus>> _statuses = Enum.GetValues<FilmStatus>().Select(s => new OndaOption<FilmStatus>(s, Texts.Of(s))).ToList();
+
+    IEnumerable<FilmRow> Visible => _films.Where(f => _filter switch
+    {
+        "now" => f.Status == FilmStatus.NowShowing,
+        "soon" => f.Status == FilmStatus.ComingSoon,
+        "archive" => f.Status == FilmStatus.Archived,
+        _ => true,
+    }).Where(f => string.IsNullOrWhiteSpace(_search) || $"{f.Title} {f.OriginalTitle} {f.Director} {f.Cast} {f.Genres}".Contains(_search.Trim(), StringComparison.CurrentCultureIgnoreCase));
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    async Task LoadAsync()
+    {
+        var r = await Sender.SendAsync(new ListFilms());
+        if (r.IsSuccess) _films = r.Value.ToList();
+    }
+
+    string? Err(string field) => _errors.FirstOrDefault(e => e.Field == field)?.Message;
+
+    void New()
+    {
+        _edit = new FilmForm { Release = DateOnly.FromDateTime(DateTime.Today.AddDays(14)) };
+        _posterPreview = null;
+        _errors = [];
+        _open = true;
+    }
+
+    void Edit(FilmRow f)
+    {
+        _edit = new FilmForm
+        {
+            Id = f.Id, Title = f.Title, OriginalTitle = f.OriginalTitle, Director = f.Director, Cast = f.Cast, Country = f.Country, Synopsis = f.Synopsis,
+            GenreSet = f.Genres.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToHashSet(), Duration = f.DurationMinutes,
+            Rating = f.Rating, Release = f.ReleaseDate, Status = f.Status, Featured = f.IsFeatured, AccentColor = f.AccentColor, Poster = f.Poster,
+        };
+        _posterPreview = null;
+        _errors = [];
+        _open = true;
+    }
+
+    void ToggleGenre(string g)
+    {
+        if (!_edit.GenreSet.Remove(g)) _edit.GenreSet.Add(g);
+    }
+
+    async Task SaveAsync()
+    {
+        _busy = true;
+        var genres = string.Join(", ", Genres.All.Where(_edit.GenreSet.Contains));
+        var r = await Sender.SendAsync(new SaveFilm(_edit.Id, _edit.Title ?? "", _edit.OriginalTitle, genres, _edit.Duration, _edit.Rating,
+            _edit.Release ?? DateOnly.FromDateTime(DateTime.Today), _edit.Director, _edit.Cast, _edit.Country, _edit.Synopsis, _edit.Status, _edit.Featured, _edit.AccentColor));
+        _busy = false;
+        if (!r.IsSuccess)
+        {
+            _errors = r.Errors;
+            if (r.Errors.All(e => e.Field is null)) Toast.Error(r.ErrorMessage);
+            return;
+        }
+        Toast.Success($"“{_edit.Title}” kaydedildi.");
+        var isNew = _edit.Id is null;
+        _edit.Id = r.Value;
+        await LoadAsync();
+        if (!isNew) _open = false;
+        else Toast.Info("Şimdi afişi yükleyebilirsiniz.");
+    }
+
+    async Task UploadAsync(InputFileChangeEventArgs e)
+    {
+        if (_edit.Id is not int id) return;
+        try
+        {
+            await using var stream = e.File.OpenReadStream(4 * 1024 * 1024);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            var r = await Sender.SendAsync(new SetFilmPoster(id, ms.ToArray(), e.File.Name));
+            if (!r.IsSuccess) { Toast.Error(r.ErrorMessage); return; }
+            _posterPreview = r.Value + "?v=" + DateTime.Now.Ticks;
+            Toast.Success("Afiş yüklendi.");
+            await LoadAsync();
+        }
+        catch (IOException)
+        {
+            Toast.Error("Afiş en fazla 4 MB olabilir.");
+        }
+    }
+}

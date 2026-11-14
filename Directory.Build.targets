@@ -12,4 +12,15 @@
       <HintPath>$(MSBuildThisFileDirectory)lib\Onda\Onda.WinForms.dll</HintPath>
     </Reference>
   </ItemGroup>
+  <!-- Onda.Web: <UseOndaWeb>true</UseOndaWeb> diyen web projelerine eklenir.
+       Yanındaki Onda deposu varsa kaynaktan, yoksa bu depodaki derlenmiş kütüphaneden (lib\Onda\Onda.Web.dll).
+       CSS/JS dll'in içine gömülü olduğu için tek dll yeterlidir. -->
+  <ItemGroup Condition="'$(UseOndaWeb)' == 'true' And Exists('$(OndaWebProject)') And '$(UseOndaDll)' != 'true'">
+    <ProjectReference Include="$(OndaWebProject)" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(UseOndaWeb)' == 'true' And (!Exists('$(OndaWebProject)') Or '$(UseOndaDll)' == 'true')">
+    <Reference Include="Onda.Web">
+      <HintPath>$(MSBuildThisFileDirectory)lib\Onda\Onda.Web.dll</HintPath>
+    </Reference>
+  </ItemGroup>
 </Project>

@@ -1,0 +1,154 @@
+@page "/yonetim/fiyatlar"
+@attribute [Authorize(Roles = Roles.Manager)]
+@inject ISender Sender
+@inject OndaToastService Toast
+<PageHeader Title="Fiyatlar" Subtitle="Bilet türleri, koltuk ve format farkları, indirimler">
+    <Actions><OndaButton Text="Bilet türü ekle" Icon="plus" Kind="OndaButtonKind.Primary" OnClick="() => EditType(null)" /></Actions>
+</PageHeader>
+
+@if (_p is null) { <div class="o-empty">Yükleniyor…</div> return; }
+
+<div class="o-grid o-grid-3">
+    <div class="o-span-2 o-col">
+        <OndaGrid Items="_p.Types" Title="Bilet türleri" Searchable="false" PageSize="0" OnRowClick="@((TicketTypeRow t) => EditType(t))">
+            <OndaGridColumn TItem="TicketTypeRow" Title="Tür" Value="t => t.Name" />
+            <OndaGridColumn TItem="TicketTypeRow" Title="Açıklama" Value="t => t.Description" />
+            <OndaGridColumn TItem="TicketTypeRow" Title="Belge" Value="t => t.RequiresProof" Kind="OndaColumnKind.Check" Width="70px" />
+            <OndaGridColumn TItem="TicketTypeRow" Title="Son 30 gün" Value="t => t.Sold30" Kind="OndaColumnKind.Number" Width="110px" />
+            <OndaGridColumn TItem="TicketTypeRow" Title="Durum" Value="@(t => t.IsActive ? "Satışta" : "Kapalı")" Kind="OndaColumnKind.Badge" Width="100px" Tone="@(t => t.IsActive ? OndaTone.Success : OndaTone.Neutral)" />
+            <OndaGridColumn TItem="TicketTypeRow" Title="Fiyat" Value="t => t.Price" Kind="OndaColumnKind.Money" Width="110px" />
+        </OndaGrid>
+
+        <OndaCard Title="Örnek fiyatlar" Subtitle="Kurallar uygulandıktan sonra müşterinin ödeyeceği tutar" Icon="calculator-variant-outline">
+            <div class="o-table-wrap" style="border:0">
+                <table class="o-table">
+                    <thead><tr><th>Durum</th>@foreach (var t in _p.Types.Where(x => x.IsActive)) { <th class="num">@t.Name</th> }</tr></thead>
+                    <tbody>
+                        @foreach (var (label, seat, format, start) in Scenarios())
+                        {
+                            <tr>
+                                <td>@label</td>
+                                @foreach (var t in _p.Types.Where(x => x.IsActive))
+                                {
+                                    var q = PricingEngine.Quote(new TicketType(t.Name, t.Price), seat, format, start, Rules());
+                                    <td class="num" title="@(q.DiscountReason ?? "")">@Texts.MoneyShort(q.Total)</td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </OndaCard>
+    </div>
+
+    <OndaCard Title="Kurallar" Icon="tune-variant">
+        <div class="o-col">
+            <div class="o-section-title">Koltuk ve format farkı</div>
+            <OndaNumberBox TValue="decimal" Label="VIP koltuk" @bind-Value="_vip" Suffix="₺" Decimals="0" />
+            <OndaNumberBox TValue="decimal" Label="Çift koltuk (kişi başı)" @bind-Value="_couple" Suffix="₺" Decimals="0" />
+            <OndaNumberBox TValue="decimal" Label="3D gözlük ve gösterim" @bind-Value="_threeD" Suffix="₺" Decimals="0" />
+            <hr class="o-divider" />
+            <div class="o-section-title">Halk günü</div>
+            <OndaSelect TValue="int" Label="Gün" Items="_days" @bind-Value="_dayIndex" />
+            <OndaNumberBox TValue="int" Label="İndirim" @bind-Value="_percent" Suffix="%" Disabled="@(_dayIndex < 0)" />
+            <hr class="o-divider" />
+            <div class="o-section-title">Matine</div>
+            <OndaTimeBox Label="Bu saatten önce başlayan seanslar" @bind-Value="_matineeBefore" />
+            <OndaNumberBox TValue="decimal" Label="Matine indirimi" @bind-Value="_matinee" Suffix="₺" Decimals="0" Help="Halk günüyle birleşmez; hangisi büyükse o uygulanır." />
+            <OndaButton Text="Kuralları kaydet" Icon="content-save-outline" Kind="OndaButtonKind.Primary" Block="true" Busy="_busy" OnClick="SaveRulesAsync" />
+        </div>
+    </OndaCard>
+</div>
+
+<OndaModal @bind-Open="_typeOpen" Title="@(_tId is null ? "Yeni bilet türü" : _tName)" Icon="tag-outline" Size="sm">
+    <ChildContent>
+        <div class="o-col">
+            <OndaTextBox Label="Ad" @bind-Value="_tName" Required="true" />
+            <OndaNumberBox TValue="decimal" Label="Fiyat" @bind-Value="_tPrice" Suffix="₺" Decimals="2" />
+            <OndaTextBox Label="Açıklama" @bind-Value="_tDesc" />
+            <OndaSwitch Text="Girişte belge gösterilir (öğrenci, 65+...)" @bind-Value="_tProof" />
+            <OndaSwitch Text="Satışta" @bind-Value="_tActive" />
+        </div>
+    </ChildContent>
+    <Footer>
+        <OndaButton Text="Vazgeç" Kind="OndaButtonKind.Ghost" OnClick="() => _typeOpen = false" />
+        <OndaButton Text="Kaydet" Icon="content-save-outline" Kind="OndaButtonKind.Primary" OnClick="SaveTypeAsync" />
+    </Footer>
+</OndaModal>
+
+@code {
+    PricingView? _p;
+    decimal _vip, _couple, _threeD, _matinee, _tPrice;
+    int _percent, _dayIndex;
+    TimeOnly? _matineeBefore;
+    bool _busy, _typeOpen, _tProof, _tActive = true;
+    int? _tId;
+    string? _tName, _tDesc;
+
+    readonly IReadOnlyList<OndaOption<int>> _days = new[] { new OndaOption<int>(-1, "Yok") }
+        .Concat(new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday }
+        .Select(d => new OndaOption<int>((int)d, Texts.Of(d)))).ToList();
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    async Task LoadAsync()
+    {
+        var r = await Sender.SendAsync(new GetPricing());
+        if (!r.IsSuccess) return;
+        _p = r.Value;
+        (_vip, _couple, _threeD, _percent, _matinee, _matineeBefore) = (_p.VipSurcharge, _p.CoupleSurcharge, _p.ThreeDSurcharge, _p.DiscountPercent, _p.MatineeDiscount, _p.MatineeBefore);
+        _dayIndex = _p.DiscountDay is { } d ? (int)d : -1;
+    }
+
+    PricingRules Rules()
+    {
+        var r = new PricingRules();
+        try { r.Update(_vip, _couple, _threeD, _dayIndex < 0 ? null : (DayOfWeek)_dayIndex, _percent, _matineeBefore ?? new TimeOnly(13, 0), _matinee); }
+        catch (DomainException) { }
+        return r;
+    }
+
+    IEnumerable<(string, SeatType, SessionFormat, DateTime)> Scenarios()
+    {
+        var sat = NextDay(DayOfWeek.Saturday);
+        var discount = _dayIndex < 0 ? sat : NextDay((DayOfWeek)_dayIndex);
+        yield return ("Hafta sonu akşam · standart", SeatType.Standard, SessionFormat.TwoD, sat.AddHours(20));
+        yield return ("Hafta sonu akşam · VIP", SeatType.Vip, SessionFormat.TwoD, sat.AddHours(20));
+        yield return ("Hafta sonu akşam · 3D", SeatType.Standard, SessionFormat.ThreeD, sat.AddHours(20));
+        yield return ("Çift koltuk (kişi başı)", SeatType.Couple, SessionFormat.TwoD, sat.AddHours(21));
+        yield return ("Matine · standart", SeatType.Standard, SessionFormat.TwoD, sat.AddHours(11));
+        if (_dayIndex >= 0) yield return ($"{Texts.Of((DayOfWeek)_dayIndex)} (halk günü) akşam", SeatType.Standard, SessionFormat.TwoD, discount.AddHours(20));
+    }
+
+    static DateTime NextDay(DayOfWeek day)
+    {
+        var d = DateTime.Today;
+        while (d.DayOfWeek != day) d = d.AddDays(1);
+        return d;
+    }
+
+    async Task SaveRulesAsync()
+    {
+        _busy = true;
+        var r = await Sender.SendAsync(new SavePricingRules(_vip, _couple, _threeD, _dayIndex < 0 ? null : (DayOfWeek)_dayIndex, _percent, _matineeBefore ?? new TimeOnly(13, 0), _matinee));
+        _busy = false;
+        if (r.IsSuccess) { Toast.Success("Fiyat kuralları kaydedildi. Yeni satışlarda geçerli."); await LoadAsync(); }
+        else Toast.Error(r.ErrorMessage);
+    }
+
+    void EditType(TicketTypeRow? t)
+    {
+        if (t is null) { _tId = null; _tName = ""; _tPrice = 200m; _tDesc = null; _tProof = false; _tActive = true; }
+        else { _tId = t.Id; _tName = t.Name; _tPrice = t.Price; _tDesc = t.Description; _tProof = t.RequiresProof; _tActive = t.IsActive; }
+        _typeOpen = true;
+    }
+
+    async Task SaveTypeAsync()
+    {
+        var r = await Sender.SendAsync(new SaveTicketType(_tId, _tName ?? "", _tPrice, _tDesc, _tProof, _tActive));
+        if (!r.IsSuccess) { Toast.Error(r.ErrorMessage); return; }
+        _typeOpen = false;
+        Toast.Success("Bilet türü kaydedildi.");
+        await LoadAsync();
+    }
+}

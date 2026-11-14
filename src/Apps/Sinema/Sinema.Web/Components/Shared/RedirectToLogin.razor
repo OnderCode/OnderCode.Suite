@@ -1,0 +1,8 @@
+@inject NavigationManager Nav
+@code {
+    protected override void OnInitialized()
+    {
+        var back = "/" + Nav.ToBaseRelativePath(Nav.Uri);
+        Nav.NavigateTo($"/yonetim/giris?returnUrl={Uri.EscapeDataString(back)}", forceLoad: false);
+    }
+}

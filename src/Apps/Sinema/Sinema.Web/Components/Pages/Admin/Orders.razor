@@ -1,0 +1,92 @@
+@page "/yonetim/satislar"
+@attribute [Authorize(Roles = Roles.BoxOffice)]
+@inject ISender Sender
+@inject OndaToastService Toast
+@inject TimeProvider Time
+<PageHeader Title="Satışlar" Subtitle="@($"{_orders.Count(o => o.Status == OrderStatus.Completed):N0} satış · {Texts.MoneyShort(_orders.Where(o => o.Status == OrderStatus.Completed).Sum(o => o.Total))}")" />
+
+<div class="o-row" style="margin-bottom:14px">
+    <OndaSegmented Items="_ranges" Value="_range" ValueChanged="@(async (int v) => { _range = v; await LoadAsync(); })" />
+    <OndaSegmented Items="_channels" Value="_channel" ValueChanged="@(async (int v) => { _channel = v; await LoadAsync(); })" />
+</div>
+
+<OndaGrid TItem="OrderRow" Items="_orders" Title="Satış listesi" ExportName="Satışlar" ExportAccent="E11D48" PageSize="20" SearchPlaceholder="Kod, film, müşteri, koltuk ara" OnRowClick="OpenAsync">
+    <OndaGridColumn TItem="OrderRow" Title="Zaman" Value="o => o.SoldAt" Kind="OndaColumnKind.DateTime" Width="125px" />
+    <OndaGridColumn TItem="OrderRow" Title="Kod" Value="o => o.Code" Width="100px" Class="o-mono" />
+    <OndaGridColumn TItem="OrderRow" Title="Film / seans" Value="o => o.What" />
+    <OndaGridColumn TItem="OrderRow" Title="Koltuklar" Value="o => o.Seats" Width="110px" />
+    <OndaGridColumn TItem="OrderRow" Title="Kanal" Value="o => o.ChannelText" Kind="OndaColumnKind.Badge" Width="80px" Tone="@(o => o.Channel == SalesChannel.Online ? OndaTone.Info : OndaTone.Neutral)" />
+    <OndaGridColumn TItem="OrderRow" Title="Satan / müşteri" Value="@(o => o.SoldBy ?? o.Customer)" Width="130px" />
+    <OndaGridColumn TItem="OrderRow" Title="Bilet" Value="o => o.TicketTotal" Kind="OndaColumnKind.Money" Width="95px" Total="true" />
+    <OndaGridColumn TItem="OrderRow" Title="Toplam" Value="o => o.Total" Kind="OndaColumnKind.Money" Width="100px" Total="true" />
+    <OndaGridColumn TItem="OrderRow" Title="Durum" Value="o => o.StatusText" Kind="OndaColumnKind.Badge" Width="95px" Tone="@(o => o.Status == OrderStatus.Refunded ? OndaTone.Danger : OndaTone.Success)" />
+</OndaGrid>
+
+<OndaModal Open="@(_view is not null)" OpenChanged="@(o => { if (!o) _view = null; })" Title="@($"Satış {_view?.Code}")" Subtitle="@_view?.FilmTitle" Icon="receipt-text-outline" Size="lg">
+    <ChildContent>
+        @if (_view is { } v)
+        {
+            <div class="kv" style="margin-bottom:14px">
+                <div><small>Zaman</small><b>@v.SoldAt.ToString("dd.MM.yyyy HH:mm")</b></div>
+                <div><small>Kanal</small><b>@Texts.Of(v.Channel) · @Texts.Of(v.Payment)</b></div>
+                <div><small>Seans</small><b>@(v.Start?.ToString("dd.MM HH:mm") ?? "—") @v.HallName</b></div>
+                <div><small>Durum</small><b>@Texts.Of(v.Status)</b></div>
+            </div>
+            @if (v.Tickets.Count > 0)
+            {
+                <OndaGrid Items="v.Tickets" Searchable="false" PageSize="0" Dense="true">
+                    <OndaGridColumn TItem="TicketLine" Title="Koltuk" Value="t => t.SeatCode" Width="80px" />
+                    <OndaGridColumn TItem="TicketLine" Title="Koltuk tipi" Value="t => t.SeatTypeText" />
+                    <OndaGridColumn TItem="TicketLine" Title="Bilet" Value="t => t.TicketType" />
+                    <OndaGridColumn TItem="TicketLine" Title="Durum" Value="t => t.StatusText" Kind="OndaColumnKind.Badge" Tone="@(t => t.Status == TicketStatus.Used ? OndaTone.Success : t.Status == TicketStatus.Refunded ? OndaTone.Danger : OndaTone.Info)" />
+                    <OndaGridColumn TItem="TicketLine" Title="Fiyat" Value="t => t.Price" Kind="OndaColumnKind.Money" Total="true" />
+                </OndaGrid>
+            }
+            @if (v.Concessions.Count > 0)
+            {
+                <div class="o-section-title" style="margin-top:14px">Büfe</div>
+                @foreach (var c in v.Concessions) { <div class="o-row" style="justify-content:space-between"><span>@c.Quantity × @c.Name</span><b>@Texts.Money(c.Total)</b></div> }
+            }
+        }
+    </ChildContent>
+    <Footer>
+        <OndaButton Text="İade et" Icon="cash-refund" Kind="OndaButtonKind.Danger" Disabled="@(_view?.Status == OrderStatus.Refunded)" OnClick="RefundAsync" />
+        <div class="o-spacer"></div>
+        <OndaButton Text="E-bilet" Icon="ticket-outline" Kind="OndaButtonKind.Outline" Href="@($"/bilet/{_view?.Code}")" Target="_blank" />
+    </Footer>
+</OndaModal>
+
+@code {
+    IReadOnlyList<OrderRow> _orders = [];
+    OrderView? _view;
+    int _range, _channel;
+    readonly IReadOnlyList<OndaOption<int>> _ranges = [new(0, "Bugün"), new(1, "Dün"), new(7, "7 gün"), new(30, "30 gün")];
+    readonly IReadOnlyList<OndaOption<int>> _channels = [new(0, "Tümü"), new(1, "Gişe"), new(2, "Online")];
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    async Task LoadAsync()
+    {
+        var today = DateOnly.FromDateTime(Time.GetLocalNow().DateTime);
+        var (from, to) = _range switch { 1 => (today.AddDays(-1), today.AddDays(-1)), 7 => (today.AddDays(-6), today), 30 => (today.AddDays(-29), today), _ => (today, today) };
+        SalesChannel? ch = _channel switch { 1 => SalesChannel.BoxOffice, 2 => SalesChannel.Online, _ => null };
+        var r = await Sender.SendAsync(new ListOrders(from, to, ch));
+        if (r.IsSuccess) _orders = r.Value;
+    }
+
+    async Task OpenAsync(OrderRow o)
+    {
+        var r = await Sender.SendAsync(new GetOrder(o.Code));
+        if (r.IsSuccess) _view = r.Value; else Toast.Error(r.ErrorMessage);
+    }
+
+    async Task RefundAsync()
+    {
+        if (_view is null) return;
+        var r = await Sender.SendAsync(new RefundOrder(_view.Code));
+        if (!r.IsSuccess) { Toast.Error(r.ErrorMessage); return; }
+        Toast.Success($"{_view.Code} iade edildi; koltuklar satışa açıldı.");
+        _view = null;
+        await LoadAsync();
+    }
+}

@@ -1,0 +1,130 @@
+@page "/kapi"
+@layout StaffLayout
+@attribute [Authorize(Roles = Roles.Usher)]
+@implements IDisposable
+@inject ISender Sender
+@inject CurrentStaff Staff
+@inject SeatHoldService Holds
+@inject TimeProvider Time
+<PageHeader Title="Kapı kontrol" Subtitle="QR okuyucu klavye gibi çalışır: kodu okutun ya da yazıp Enter'a basın" />
+
+<div class="door">
+    <div class="o-col">
+        <OndaCard>
+            <div class="door-input">
+                <OndaIcon Name="qrcode-scan" />
+                <input class="o-input" placeholder="Bilet kodu (ör. K7P2-QX9D)" value="@_code" @oninput="e => _code = e.Value?.ToString()" @onkeydown="KeyAsync" autofocus />
+                <OndaButton Text="Okut" Icon="check" Kind="OndaButtonKind.Primary" Size="OndaSize.Large" OnClick="CheckAsync" Busy="_busy" />
+            </div>
+        </OndaCard>
+        @if (_ok is { } ok)
+        {
+            <div class="door-result ok">
+                <OndaIcon Name="check-circle" />
+                <div style="flex:1;min-width:0">
+                    <div class="big">Giriş onaylandı · @ok.Admitted kişi</div>
+                    <div>@ok.Order.FilmTitle · <b>@ok.Order.HallName</b> · @ok.Order.Start?.ToString("HH:mm")</div>
+                    <div class="seats" style="margin-top:8px">@foreach (var t in ok.Order.Tickets) { <span class="seat-tag @(t.Status == TicketStatus.Used ? "" : "void")"><b>@t.SeatCode</b><small>@t.TicketType</small></span> }</div>
+                    @foreach (var w in ok.Warnings) { <div class="warn-line"><OndaIcon Name="card-account-details-outline" />@w</div> }
+                </div>
+            </div>
+        }
+        else if (_error is not null)
+        {
+            <div class="door-result bad"><OndaIcon Name="close-circle" /><div><div class="big">Giriş yok</div><div>@_error</div></div></div>
+        }
+        <OndaGrid Items="_log" Title="Son okutmalar" Searchable="false" PageSize="0" Dense="true" EmptyText="Henüz okutma yok" EmptyIcon="qrcode">
+            <OndaGridColumn TItem="LogRow" Title="Saat" Value="l => l.At" Kind="OndaColumnKind.Time" Width="70px" />
+            <OndaGridColumn TItem="LogRow" Title="Kod" Value="l => l.Code" Width="110px" Class="o-mono" />
+            <OndaGridColumn TItem="LogRow" Title="Sonuç" Value="l => l.Result" Kind="OndaColumnKind.Badge" Width="110px" Tone="@(l => l.Ok ? OndaTone.Success : OndaTone.Danger)" />
+            <OndaGridColumn TItem="LogRow" Title="Ayrıntı" Value="l => l.Detail" />
+        </OndaGrid>
+    </div>
+    <OndaCard Title="Kapıdaki seanslar" Subtitle="Giriş yapan / satılan" Icon="door-open">
+        <div class="o-col" style="gap:12px">
+            @foreach (var s in _sessions)
+            {
+                <div class="mini-session">
+                    <Poster Src="@s.PosterUrl" Class="mini" />
+                    <div style="flex:1;min-width:0">
+                        <div class="o-row" style="justify-content:space-between"><b class="o-ellipsis">@s.FilmTitle</b><span class="o-small">@s.Start.ToString("HH:mm")</span></div>
+                        <div class="o-small o-muted">@s.HallName · @(_entered.GetValueOrDefault(s.Id))/@s.Sold içeride</div>
+                        <OndaProgress Value="@(s.Sold == 0 ? 0 : _entered.GetValueOrDefault(s.Id) / (double)s.Sold)" Tone="OndaTone.Success" />
+                    </div>
+                </div>
+            }
+            @if (_sessions.Count == 0) { <OndaEmpty Icon="door-closed" Title="Şu an kapısı açık seans yok" /> }
+        </div>
+    </OndaCard>
+</div>
+
+@code {
+    sealed record LogRow(DateTime At, string Code, bool Ok, string Result, string Detail);
+
+    string? _code, _error;
+    CheckInResult? _ok;
+    bool _busy;
+    int? _usherId;
+    readonly List<LogRow> _log = [];
+    IReadOnlyList<SessionRow> _sessions = [];
+    readonly Dictionary<int, int> _entered = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        (_usherId, _, _) = await Staff.GetAsync();
+        Holds.Changed += OnChanged;
+        await LoadSessionsAsync();
+    }
+
+    async Task LoadSessionsAsync()
+    {
+        var now = Time.GetLocalNow().DateTime;
+        var today = DateOnly.FromDateTime(now);
+        var r = await Sender.SendAsync(new ListSessions(today, today));
+        if (!r.IsSuccess) return;
+        _sessions = r.Value.Where(s => s.Start <= now.AddMinutes(60) && s.End >= now).ToList();
+        _entered.Clear();
+        foreach (var s in _sessions)
+        {
+            var m = await Sender.SendAsync(new GetSeatMap(s.Id));
+            if (m.IsSuccess) _entered[s.Id] = m.Value.UsedSeats.Count;
+        }
+    }
+
+    void OnChanged(int sessionId)
+    {
+        if (_sessions.All(s => s.Id != sessionId)) return;
+        _ = InvokeAsync(async () => { await LoadSessionsAsync(); StateHasChanged(); });
+    }
+
+    async Task KeyAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await CheckAsync();
+    }
+
+    async Task CheckAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_code)) return;
+        _busy = true;
+        var code = TicketCode.Normalize(_code.Replace("SINEMA:", "", StringComparison.OrdinalIgnoreCase));
+        var r = await Sender.SendAsync(new CheckInTicket(code, _usherId));
+        _busy = false;
+        var now = Time.GetLocalNow().DateTime;
+        if (r.IsSuccess)
+        {
+            _ok = r.Value;
+            _error = null;
+            _log.Insert(0, new LogRow(now, code, true, "Girdi", $"{r.Value.Order.FilmTitle} · {r.Value.Order.HallName} · {r.Value.Order.Seats}"));
+        }
+        else
+        {
+            _ok = null;
+            _error = r.ErrorMessage;
+            _log.Insert(0, new LogRow(now, code, false, "Reddedildi", r.ErrorMessage));
+        }
+        if (_log.Count > 20) _log.RemoveAt(_log.Count - 1);
+        _code = "";
+    }
+
+    public void Dispose() => Holds.Changed -= OnChanged;
+}

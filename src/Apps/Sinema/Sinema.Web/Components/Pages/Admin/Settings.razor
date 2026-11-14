@@ -1,0 +1,81 @@
+@page "/yonetim/ayarlar"
+@attribute [Authorize(Roles = Roles.Manager)]
+@inject ISender Sender
+@inject OndaToastService Toast
+@inject IDemoReset Demo
+@inject NavigationManager Nav
+<PageHeader Title="Ayarlar" Subtitle="İşletme kuralları ve demo verisi" />
+
+@if (_s is null) { <div class="o-empty">Yükleniyor…</div> return; }
+
+<div class="o-grid o-grid-2">
+    <OndaCard Title="Sinema" Icon="domain">
+        <div class="o-col">
+            <OndaTextBox Label="Sinema adı" @bind-Value="_name" Required="true" />
+            <OndaTextBox Label="Şube" @bind-Value="_branch" />
+            <div class="o-grid o-grid-2">
+                <OndaTimeBox Label="İlk seans en erken" @bind-Value="_opens" />
+                <OndaTimeBox Label="Son seans en geç" @bind-Value="_last" />
+            </div>
+        </div>
+    </OndaCard>
+    <OndaCard Title="Seans ve satış kuralları" Icon="timer-cog-outline">
+        <div class="o-grid o-grid-2">
+            <OndaNumberBox TValue="int" Label="Reklam / fragman" @bind-Value="_ads" Suffix="dk" Help="Film bu süre sonra başlar" />
+            <OndaNumberBox TValue="int" Label="Salon temizliği" @bind-Value="_clean" Suffix="dk" Help="Seanslar arası boşluk" />
+            <OndaNumberBox TValue="int" Label="Koltuk tutma süresi" @bind-Value="_hold" Suffix="dk" Help="Online sepette" />
+            <OndaNumberBox TValue="int" Label="Online satış kapanışı" @bind-Value="_close" Suffix="dk önce" />
+            <OndaNumberBox TValue="int" Label="Kapı açılışı" @bind-Value="_checkIn" Suffix="dk önce" Help="Bilet okutma başlar" />
+        </div>
+    </OndaCard>
+</div>
+<div class="o-row" style="margin-top:14px">
+    <OndaButton Text="Kaydet" Icon="content-save-outline" Kind="OndaButtonKind.Primary" Busy="_busy" OnClick="SaveAsync" />
+</div>
+
+<OndaCard Title="Demo verisi" Icon="database-refresh-outline" Style="margin-top:20px;max-width:720px">
+    <p class="o-muted" style="margin-top:0">Bütün filmler, satışlar ve ayarlar silinir; son 21 günün örnek işleyişi bugünün tarihine göre yeniden üretilir. Yüklenen afişler korunmaz.</p>
+    <OndaButton Text="Örnek veriyi yeniden yükle" Icon="restore" Kind="OndaButtonKind.Danger" Busy="_resetting" OnClick="() => _confirm = true" />
+</OndaCard>
+
+<OndaModal @bind-Open="_confirm" Title="Örnek veri yeniden yüklensin mi?" Icon="alert-outline" Size="sm">
+    <ChildContent>Mevcut bütün kayıtlar silinecek. Bu işlem birkaç saniye sürer.</ChildContent>
+    <Footer>
+        <OndaButton Text="Vazgeç" Kind="OndaButtonKind.Ghost" OnClick="() => _confirm = false" />
+        <OndaButton Text="Sil ve yeniden yükle" Kind="OndaButtonKind.Danger" Busy="_resetting" OnClick="ResetAsync" />
+    </Footer>
+</OndaModal>
+
+@code {
+    SettingsView? _s;
+    string? _name, _branch;
+    int _ads, _clean, _hold, _close, _checkIn;
+    TimeOnly? _opens, _last;
+    bool _busy, _confirm, _resetting;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var r = await Sender.SendAsync(new GetSettings());
+        if (!r.IsSuccess) return;
+        _s = r.Value;
+        (_name, _branch, _ads, _clean, _hold, _close, _checkIn, _opens, _last) = (_s.Name, _s.Branch, _s.AdsMinutes, _s.CleaningMinutes, _s.HoldMinutes, _s.OnlineSalesCloseMinutes, _s.CheckInOpensMinutes, _s.OpensAt, _s.LastSessionAt);
+    }
+
+    async Task SaveAsync()
+    {
+        _busy = true;
+        var r = await Sender.SendAsync(new SaveSettings(new SettingsView(_name ?? "", _branch ?? "", _ads, _clean, _hold, _checkIn, _close, _opens ?? new TimeOnly(10, 30), _last ?? new TimeOnly(23, 15))));
+        _busy = false;
+        if (r.IsSuccess) Toast.Success("Ayarlar kaydedildi. Yeni açılan seanslarda geçerli."); else Toast.Error(r.ErrorMessage);
+    }
+
+    async Task ResetAsync()
+    {
+        _resetting = true;
+        await Demo.ResetAsync(CancellationToken.None);
+        _resetting = false;
+        _confirm = false;
+        Toast.Success("Örnek veri yeniden yüklendi.");
+        Nav.NavigateTo("/yonetim", forceLoad: true);
+    }
+}

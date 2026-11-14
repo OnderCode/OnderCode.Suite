@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Sinema kullanım senaryoları: film, salon, seans, fiyat, gişe ve online satış, koltuk tutma, kapı kontrolü, büfe, personel, raporlar. -->
+  <PropertyGroup>
+    <RootNamespace>Sinema.Application</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Sinema.Domain\Sinema.Domain.csproj" />
+    <ProjectReference Include="..\..\..\Shared\OnderCode.Application\OnderCode.Application.csproj" />
+    <ProjectReference Include="..\..\..\Shared\OnderCode.Analytics\OnderCode.Analytics.csproj" />
+  </ItemGroup>
+</Project>

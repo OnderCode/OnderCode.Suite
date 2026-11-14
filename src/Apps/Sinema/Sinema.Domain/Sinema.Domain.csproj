@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Sinema alan modeli: film, salon ve koltuk düzeni, seans, fiyat kuralları, bilet ve sipariş, büfe, personel. Altyapıdan bağımsız. -->
+  <PropertyGroup>
+    <RootNamespace>Sinema.Domain</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Shared\OnderCode.Kernel\OnderCode.Kernel.csproj" />
+  </ItemGroup>
+</Project>

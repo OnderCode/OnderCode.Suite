@@ -1,0 +1,80 @@
+@page "/yonetim/personel"
+@attribute [Authorize(Roles = Roles.Manager)]
+@inject ISender Sender
+@inject OndaToastService Toast
+<PageHeader Title="Personel" Subtitle="@($"{_staff.Count(s => s.IsActive)} aktif çalışan")">
+    <Actions><OndaButton Text="Personel ekle" Icon="account-plus-outline" Kind="OndaButtonKind.Primary" OnClick="() => Edit(null)" /></Actions>
+</PageHeader>
+
+<div class="o-grid o-grid-3" style="margin-bottom:16px">
+    @foreach (var role in Enum.GetValues<StaffRole>())
+    {
+        var r = role;
+        <OndaStatCard Title="@Texts.Of(r)" Value="@_staff.Count(s => s.Role == r && s.IsActive).ToString()" Icon="@(r == StaffRole.Manager ? "account-tie-outline" : r == StaffRole.BoxOffice ? "ticket-confirmation-outline" : "qrcode-scan")"
+                      Note="@(r == StaffRole.Usher ? $"30 günde {_staff.Where(s => s.Role == r).Sum(s => s.CheckIns30):N0} bilet okuttu" : r == StaffRole.BoxOffice ? $"30 günde {Texts.MoneyShort(_staff.Where(s => s.Role == r).Sum(s => s.Revenue30))} satış" : "Bütün yetkiler")" />
+    }
+</div>
+
+<OndaGrid Items="_staff" Title="Çalışanlar" ExportName="Personel" ExportAccent="E11D48" PageSize="0" OnRowClick="@((EmployeeRow e) => Edit(e))">
+    <OndaGridColumn TItem="EmployeeRow" Title="Ad soyad" Value="e => e.FullName">
+        <Template><div class="o-row" style="gap:10px;flex-wrap:nowrap"><OndaAvatar Name="@context.FullName" Size="30" /><b>@context.FullName</b></div></Template>
+    </OndaGridColumn>
+    <OndaGridColumn TItem="EmployeeRow" Title="Görev" Value="e => e.RoleText" Kind="OndaColumnKind.Badge" Width="150px" Tone="@(e => e.Role == StaffRole.Manager ? OndaTone.Primary : e.Role == StaffRole.BoxOffice ? OndaTone.Info : OndaTone.Warning)" />
+    <OndaGridColumn TItem="EmployeeRow" Title="Vardiya" Value="e => e.Shift" Width="170px" />
+    <OndaGridColumn TItem="EmployeeRow" Title="İşe giriş" Value="e => e.HireDate" Kind="OndaColumnKind.Date" Width="110px" />
+    <OndaGridColumn TItem="EmployeeRow" Title="30 gün satış" Value="e => e.Sales30" Kind="OndaColumnKind.Number" Width="110px" />
+    <OndaGridColumn TItem="EmployeeRow" Title="30 gün ciro" Value="e => e.Revenue30" Kind="OndaColumnKind.Money" Width="130px" />
+    <OndaGridColumn TItem="EmployeeRow" Title="Okutulan bilet" Value="e => e.CheckIns30" Kind="OndaColumnKind.Number" Width="120px" />
+    <OndaGridColumn TItem="EmployeeRow" Title="Durum" Value="@(e => e.IsActive ? "Aktif" : "Ayrıldı")" Kind="OndaColumnKind.Badge" Width="90px" Tone="@(e => e.IsActive ? OndaTone.Success : OndaTone.Neutral)" />
+</OndaGrid>
+<div class="o-small o-muted" style="margin-top:8px">Kişisel veri en az tutulur: kimlik numarası, telefon ve adres alanı yoktur.</div>
+
+<OndaModal @bind-Open="_open" Title="@(_id is null ? "Yeni personel" : _name)" Icon="account-outline" Size="sm">
+    <ChildContent>
+        <div class="o-col">
+            <OndaTextBox Label="Ad soyad" @bind-Value="_name" Required="true" />
+            <div class="o-field"><label class="o-label">Görev</label><OndaSegmented Items="_roles" @bind-Value="_role" Block="true" /></div>
+            <OndaDateBox Label="İşe giriş" @bind-Value="_hire" />
+            <OndaTextBox Label="Vardiya" @bind-Value="_shift" Placeholder="Hafta içi akşam" />
+            <OndaSwitch Text="Aktif" @bind-Value="_active" />
+        </div>
+    </ChildContent>
+    <Footer>
+        <OndaButton Text="Vazgeç" Kind="OndaButtonKind.Ghost" OnClick="() => _open = false" />
+        <OndaButton Text="Kaydet" Icon="content-save-outline" Kind="OndaButtonKind.Primary" OnClick="SaveAsync" />
+    </Footer>
+</OndaModal>
+
+@code {
+    IReadOnlyList<EmployeeRow> _staff = [];
+    bool _open, _active = true;
+    int? _id;
+    string? _name, _shift;
+    StaffRole _role = StaffRole.BoxOffice;
+    DateOnly? _hire;
+    readonly IReadOnlyList<OndaOption<StaffRole>> _roles = Enum.GetValues<StaffRole>().Select(r => new OndaOption<StaffRole>(r, Texts.Of(r))).ToList();
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    async Task LoadAsync()
+    {
+        var r = await Sender.SendAsync(new ListEmployees());
+        if (r.IsSuccess) _staff = r.Value;
+    }
+
+    void Edit(EmployeeRow? e)
+    {
+        if (e is null) { _id = null; _name = ""; _role = StaffRole.BoxOffice; _hire = DateOnly.FromDateTime(DateTime.Today); _shift = null; _active = true; }
+        else { _id = e.Id; _name = e.FullName; _role = e.Role; _hire = e.HireDate; _shift = e.Shift; _active = e.IsActive; }
+        _open = true;
+    }
+
+    async Task SaveAsync()
+    {
+        var r = await Sender.SendAsync(new SaveEmployee(_id, _name ?? "", _role, _hire ?? DateOnly.FromDateTime(DateTime.Today), _shift, _active));
+        if (!r.IsSuccess) { Toast.Error(r.ErrorMessage); return; }
+        _open = false;
+        Toast.Success("Personel kaydedildi.");
+        await LoadAsync();
+    }
+}

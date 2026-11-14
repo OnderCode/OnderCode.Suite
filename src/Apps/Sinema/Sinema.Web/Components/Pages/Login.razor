@@ -1,0 +1,67 @@
+@page "/yonetim/giris"
+@layout EmptyLayout
+@inject ISender Sender
+<PageTitle>Personel girişi</PageTitle>
+
+<div class="login">
+    <div class="login-side" data-theme="dark">
+        <a class="cine-logo" href="/"><span class="cine-logo-mark"><OndaIcon Name="movie-open-outline" /></span><span><b>@_name</b><small>@_branch</small></span></a>
+        <div>
+            <h1>Sinemanın bütün işi tek ekranda.</h1>
+            <p>Salon tasarımından seans planına, gişeden kapı kontrolüne ve raporlara kadar.</p>
+            <ul>
+                <li><OndaIcon Name="seat-outline" />Sürükle-boya salon tasarımcısı</li>
+                <li><OndaIcon Name="lightning-bolt-outline" />Canlı koltuk kilidi: aynı koltuk iki kez satılamaz</li>
+                <li><OndaIcon Name="qrcode-scan" />QR'lı e-bilet ve kapı kontrolü</li>
+                <li><OndaIcon Name="chart-box-outline" />Doluluk, ciro ve yoğun saat raporları</li>
+            </ul>
+        </div>
+        <div class="o-small o-muted">Onda.Web bileşenleriyle yazıldı · açık kaynak</div>
+    </div>
+    <div class="login-main">
+        <div style="max-width:620px;width:100%">
+            <h2>Personel girişi</h2>
+            <p class="o-muted">Demo: parola yok. Bir personel kartı seçin; yetkiler göreve göre değişir.</p>
+            <form method="post" action="/giris" data-enhance="false">
+                <AntiforgeryToken />
+                <input type="hidden" name="returnUrl" value="@ReturnUrl" />
+                @foreach (var g in _staff.GroupBy(s => s.Role))
+                {
+                    <div class="o-section-title" style="margin-top:18px">@Texts.Of(g.Key)</div>
+                    <div class="o-muted o-small" style="margin-bottom:8px">@Hint(g.Key)</div>
+                    <div class="staff-cards">
+                        @foreach (var s in g)
+                        {
+                            <button type="submit" name="staffId" value="@s.Id" class="staff-card">
+                                <OndaAvatar Name="@s.FullName" Size="40" />
+                                <span><b>@s.FullName</b><small>@(s.Shift ?? s.RoleText)</small></span>
+                                <OndaIcon Name="arrow-right" />
+                            </button>
+                        }
+                    </div>
+                }
+            </form>
+        </div>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
+    IReadOnlyList<EmployeeRow> _staff = [];
+    string _name = "OnderCode Sinema", _branch = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var r = await Sender.SendAsync(new ListLoginStaff());
+        if (r.IsSuccess) _staff = r.Value;
+        var n = await Sender.SendAsync(new GetCinemaName());
+        if (n.IsSuccess) (_name, _branch) = n.Value;
+    }
+
+    static string Hint(StaffRole r) => r switch
+    {
+        StaffRole.Manager => "Bütün ekranlar: program, salonlar, fiyatlar, personel, raporlar.",
+        StaffRole.BoxOffice => "Gişe satışı, büfe ve satış listesi.",
+        _ => "Kapıda bilet okutma.",
+    };
+}

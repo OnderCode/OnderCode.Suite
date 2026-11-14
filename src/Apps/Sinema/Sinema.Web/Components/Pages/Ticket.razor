@@ -1,0 +1,79 @@
+@page "/bilet/{Code}"
+@inject ISender Sender
+@inject OndaJs Js
+@inject NavigationManager Nav
+<PageTitle>E-bilet @Code</PageTitle>
+
+<section class="cine-wrap ticket-page">
+    @if (_error is not null)
+    {
+        <OndaEmpty Icon="ticket-outline" Title="Bilet bulunamadı" Text="@_error">
+            <OndaButton Text="Kodla ara" Icon="magnify" Href="/biletim" Kind="OndaButtonKind.Primary" />
+        </OndaEmpty>
+    }
+    else if (_o is { } o)
+    {
+        @if (_new)
+        {
+            <div class="notice ok no-print"><OndaIcon Name="check-circle" />Ödemeniz alındı (demo). E-biletiniz aşağıda; girişte QR kodu okutmanız yeterli.</div>
+        }
+        <div class="eticket" style="--accent:@(o.Accent ?? "#E11D48")">
+            <div class="eticket-main">
+                <Poster Src="@(o.Poster ?? "posters/bos.svg")" Alt="@o.FilmTitle" />
+                <div class="o-col" style="gap:10px;min-width:0">
+                    <div class="o-row" style="gap:8px">
+                        <h1>@o.FilmTitle</h1>
+                        @if (o.Rating is { } rt) { <RatingBadge Rating="rt" /> }
+                    </div>
+                    <div class="kv">
+                        <div><small>Tarih</small><b>@o.Start?.ToString("d MMMM dddd", Texts.Turkish)</b></div>
+                        <div><small>Saat</small><b>@o.Start?.ToString("HH:mm")</b></div>
+                        <div><small>Salon</small><b>@o.HallName</b></div>
+                        <div><small>Format</small><b>@(o.Format is { } fm ? Texts.Of(fm) : "") · @(o.Language is { } lg ? Texts.Short(lg) : "")</b></div>
+                    </div>
+                    <div class="seats">
+                        @foreach (var t in o.Tickets)
+                        {
+                            <span class="seat-tag @(t.Status == TicketStatus.Used ? "used" : t.Status == TicketStatus.Refunded ? "void" : "")" title="@t.StatusText">
+                                <b>@t.SeatCode</b><small>@t.TicketType</small>
+                            </span>
+                        }
+                    </div>
+                    <div class="o-small o-muted">@(o.CustomerName ?? "Gişe satışı") · @Texts.Of(o.Channel) · @o.SoldAt.ToString("dd.MM.yyyy HH:mm")</div>
+                </div>
+            </div>
+            <div class="eticket-stub">
+                @if (o.Status == OrderStatus.Refunded)
+                {
+                    <div class="void-stamp">İADE EDİLDİ</div>
+                }
+                else
+                {
+                    <img src="@($"qr/{o.Code}")" alt="QR kod" width="170" height="170" />
+                }
+                <div class="code">@o.Code</div>
+                <div class="o-small o-muted">@o.Tickets.Count bilet · @Texts.Money(o.TicketTotal)</div>
+                @if (o.AllUsed) { <OndaBadge Text="Girişte okutuldu" Tone="OndaTone.Success" Icon="check" /> }
+            </div>
+        </div>
+        <div class="o-row no-print" style="justify-content:center;margin-top:18px">
+            <OndaButton Text="Yazdır / PDF" Icon="printer-outline" Kind="OndaButtonKind.Outline" OnClick="() => Js.PrintAsync().AsTask()" />
+            <OndaButton Text="Başka film seç" Icon="movie-open-outline" Kind="OndaButtonKind.Ghost" Href="/" />
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter] public string Code { get; set; } = "";
+    [SupplyParameterFromQuery(Name = "yeni")] public int? New { get; set; }
+    OrderView? _o;
+    string? _error;
+    bool _new;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _new = New == 1;
+        var r = await Sender.SendAsync(new GetOrder(Code));
+        if (r.IsSuccess) _o = r.Value; else _error = r.ErrorMessage;
+    }
+}

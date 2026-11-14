@@ -1,0 +1,216 @@
+@page "/seans/{Id:int}"
+@implements IDisposable
+@inject ISender Sender
+@inject SeatHoldService Holds
+@inject Visitor Me
+@inject NavigationManager Nav
+@inject OndaToastService Toast
+@inject TimeProvider Time
+<PageTitle>@(_map?.Session.FilmTitle ?? "Koltuk seçimi") · Koltuk seçimi</PageTitle>
+
+@if (_error is not null)
+{
+    <div class="cine-wrap"><OndaEmpty Icon="ticket-outline" Title="Seans bulunamadı" Text="@_error" /></div>
+}
+else if (_map is { } m)
+{
+    var s = m.Session;
+    <section class="cine-wrap seat-page">
+        <div class="seat-head" style="--accent:@s.Accent">
+            <Poster Src="@s.PosterUrl" Alt="@s.FilmTitle" />
+            <div style="min-width:0">
+                <div class="o-row" style="gap:8px"><a class="film-title" href="@($"/film/{s.FilmId}")">@s.FilmTitle</a><RatingBadge Rating="s.Rating" /></div>
+                <div class="facts">
+                    <span><OndaIcon Name="calendar-blank-outline" />@s.Start.ToString("d MMMM dddd", Texts.Turkish)</span>
+                    <span><OndaIcon Name="clock-outline" />@s.Start.ToString("HH:mm") – @s.End.ToString("HH:mm")</span>
+                    <span><OndaIcon Name="seat-outline" />@s.HallName@(string.IsNullOrEmpty(m.HallFeatures) ? "" : " · " + m.HallFeatures)</span>
+                    <span><OndaIcon Name="translate" />@s.FormatText · @Texts.Of(s.Language)</span>
+                </div>
+            </div>
+            <div class="o-spacer"></div>
+            <div class="steps">
+                <span class="@(_step == 1 ? "on" : "done")">1 Koltuk</span>
+                <span class="@(_step == 2 ? "on" : "")">2 Ödeme</span>
+                <span>3 E-bilet</span>
+            </div>
+        </div>
+
+        @if (!m.OnlineOpen)
+        {
+            <div class="notice warn"><OndaIcon Name="alert-outline" />@m.ClosedReason</div>
+        }
+
+        <div class="seat-layout">
+            <div class="o-card seat-card">
+                <SeatMap Layout="_layout" Sold="m.SoldSeats" Holds="_holds" Holder="@Me.Id" ReadOnly="@(!m.OnlineOpen || _step == 2)" OnSeatClick="Toggle" />
+                <div class="live o-small"><span class="dot"></span>Canlı: başka ekranlarda seçilen koltuklar anında görünür.</div>
+            </div>
+
+            <aside class="o-card summary">
+                <div class="o-card-body o-col">
+                    <div class="o-row" style="justify-content:space-between">
+                        <div class="o-card-title">Sepetiniz</div>
+                        @if (_expires is { } exp)
+                        {
+                            var left = exp - Time.GetUtcNow().UtcDateTime;
+                            <span class="timer @(left.TotalSeconds < 60 ? "urgent" : "")" title="Koltuklarınız bu süre boyunca size ayrıldı"><OndaIcon Name="timer-sand" />@($"{(int)Math.Max(0, left.TotalMinutes)}:{Math.Max(0, left.Seconds):00}")</span>
+                        }
+                    </div>
+                    @if (Mine.Count == 0)
+                    {
+                        <div class="o-muted">Plan üzerinden koltuk seçin. Seçtiğiniz koltuk @Holds.HoldMinutes dakika boyunca size ayrılır.</div>
+                    }
+                    @foreach (var seat in Mine)
+                    {
+                        var code = seat.Code;
+                        var typeId = _types.GetValueOrDefault(code, DefaultType);
+                        var q = Quote(typeId, seat.Type);
+                        <div class="cart-line">
+                            <span class="seat-code">@(code)</span>
+                            <div style="flex:1;min-width:0">
+                                <select class="o-select cart-type" value="@typeId" disabled="@(_step == 2)" @onchange="e => SetType(code, e)">
+                                    @foreach (var t in TypeChoices)
+                                    {
+                                        <option value="@t.TicketTypeId">@t.Name</option>
+                                    }
+                                </select>
+                                <div class="o-small o-muted">@Texts.Of(seat.Type)@(q?.Quote.DiscountReason is { } why ? " · " + why : "")</div>
+                            </div>
+                            <b>@Texts.MoneyShort(q?.Quote.Total ?? 0)</b>
+                            @if (_step == 1) { <OndaButton Icon="close" Kind="OndaButtonKind.Ghost" Size="OndaSize.Small" Title="Kaldır" OnClick="() => Toggle(seat)" /> }
+                        </div>
+                    }
+                    @if (Mine.Count > 0)
+                    {
+                        <hr class="o-divider" />
+                        <div class="o-row" style="justify-content:space-between"><span>Toplam (@Mine.Count bilet)</span><b class="total">@Texts.Money(Total)</b></div>
+                        @if (Mine.Any(x => TypeChoices.FirstOrDefault(t => t.TicketTypeId == _types.GetValueOrDefault(x.Code, DefaultType))?.RequiresProof == true))
+                        {
+                            <div class="o-small o-muted"><OndaIcon Name="card-account-details-outline" /> İndirimli biletlerde girişte belge istenir.</div>
+                        }
+                    }
+                    @if (_step == 1)
+                    {
+                        <OndaButton Text="Devam et" IconRight="arrow-right" Kind="OndaButtonKind.Primary" Size="OndaSize.Large" Block="true" Disabled="@(Mine.Count == 0 || !m.OnlineOpen)" OnClick="GoPay" />
+                    }
+                    else
+                    {
+                        <OndaTextBox Label="Bilet üzerindeki ad" Placeholder="Ad Soyad" @bind-Value="_name" Required="true" Error="@_nameError" Immediate="true" Icon="account-outline" />
+                        <div class="pay-box">
+                            <OndaIcon Name="shield-check-outline" />
+                            <div><b>Demo ödeme</b><div class="o-small o-muted">Bu bir gösterim projesidir; kart bilgisi istenmez, para çekilmez.</div></div>
+                        </div>
+                        <OndaButton Text="@($"Ödemeyi tamamla · {Texts.MoneyShort(Total)}")" Icon="lock-outline" Kind="OndaButtonKind.Primary" Size="OndaSize.Large" Block="true" Busy="_busy" OnClick="PayAsync" />
+                        <OndaButton Text="Koltuklara dön" Icon="arrow-left" Kind="OndaButtonKind.Ghost" Block="true" OnClick="() => _step = 1" />
+                    }
+                </div>
+            </aside>
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    SeatMapView? _map;
+    HallLayout _layout = HallLayout.Grid(3, 5);
+    IReadOnlyList<SeatHold> _holds = [];
+    IReadOnlyList<QuoteRow> _quotes = [];
+    readonly Dictionary<string, int> _types = new(StringComparer.OrdinalIgnoreCase);
+    string? _error, _name, _nameError;
+    int _step = 1;
+    bool _busy;
+    DateTime? _expires;
+    Timer? _timer;
+
+    List<SeatInfo> Mine => _holds.Where(h => h.HolderId == Me.Id).Select(h => _layout.Find(h.SeatCode)).OfType<SeatInfo>().OrderBy(x => x.Row).ThenBy(x => x.Number).ToList();
+
+    IEnumerable<QuoteRow> TypeChoices => _quotes.Where(q => q.Seat == SeatType.Standard);
+
+    int DefaultType => TypeChoices.FirstOrDefault()?.TicketTypeId ?? 0;
+
+    QuoteRow? Quote(int typeId, SeatType seat) => _quotes.FirstOrDefault(q => q.TicketTypeId == typeId && q.Seat == seat);
+
+    decimal Total => Mine.Sum(x => Quote(_types.GetValueOrDefault(x.Code, DefaultType), x.Type)?.Quote.Total ?? 0);
+
+    protected override async Task OnInitializedAsync()
+    {
+        Holds.Changed += OnHoldsChanged;
+        await LoadAsync();
+        var q = await Sender.SendAsync(new GetQuotes(Id));
+        if (q.IsSuccess) _quotes = q.Value;
+        _timer = new Timer(_ => _ = InvokeAsync(Tick), null, 1000, 1000);
+    }
+
+    async Task LoadAsync()
+    {
+        var r = await Sender.SendAsync(new GetSeatMap(Id));
+        if (!r.IsSuccess) { _error = r.ErrorMessage; return; }
+        _map = r.Value;
+        _layout = HallLayout.Parse(_map.Layout);
+        _holds = Holds.Holds(Id);
+        _expires = Holds.HoldsOf(Me.Id).Where(h => h.SessionId == Id).Select(h => (DateTime?)h.ExpiresAt).Min();
+    }
+
+    void OnHoldsChanged(int sessionId)
+    {
+        if (sessionId != Id) return;
+        _ = InvokeAsync(async () => { await LoadAsync(); StateHasChanged(); });
+    }
+
+    void Tick()
+    {
+        if (_expires is { } e && e <= Time.GetUtcNow().UtcDateTime)
+        {
+            _expires = null;
+            _step = 1;
+            Holds.ReleaseAll(Me.Id);
+            Toast.Warning("Süre doldu; koltuklarınız serbest bırakıldı. Lütfen yeniden seçin.");
+        }
+        if (_expires is not null) StateHasChanged();
+    }
+
+    void Toggle(SeatInfo seat)
+    {
+        if (_map is null || _step == 2) return;
+        if (_holds.Any(h => h.SeatCode == seat.Code && h.HolderId == Me.Id))
+        {
+            Holds.Release(Id, seat.Code, Me.Id);
+            return;
+        }
+        if (Mine.Count >= 10) { Toast.Warning("Tek seferde en fazla 10 bilet alabilirsiniz."); return; }
+        var sold = new HashSet<string>(_map.SoldSeats, StringComparer.OrdinalIgnoreCase);
+        if (!Holds.TryHold(Id, seat.Code, Me.Id, sold)) Toast.Warning($"{seat.Code} koltuğu az önce başkası tarafından seçildi.");
+        if (seat.Type == SeatType.Couple) Toast.Info("Çift koltuklar iki kişiliktir; yanındaki koltuğu da seçmeyi unutmayın.");
+    }
+
+    void SetType(string code, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var id)) _types[code] = id;
+    }
+
+    void GoPay()
+    {
+        _expires = Holds.Extend(Me.Id);
+        _step = 2;
+    }
+
+    async Task PayAsync()
+    {
+        _nameError = string.IsNullOrWhiteSpace(_name) || _name.Trim().Length < 3 ? "Bilet üzerinde görünecek adı yazın." : null;
+        if (_nameError is not null) return;
+        _busy = true;
+        var seats = Mine.Select(x => new SeatPick(x.Code, _types.GetValueOrDefault(x.Code, DefaultType))).ToList();
+        var r = await Sender.SendAsync(new SellTickets(Id, seats, [], SalesChannel.Online, PaymentMethod.Online, _name, null, Me.Id));
+        _busy = false;
+        if (r.IsSuccess) Nav.NavigateTo($"/bilet/{r.Value}?yeni=1");
+        else { Toast.Error(r.ErrorMessage); _step = 1; await LoadAsync(); }
+    }
+
+    public void Dispose()
+    {
+        Holds.Changed -= OnHoldsChanged;
+        _timer?.Dispose();
+        Holds.ReleaseAll(Me.Id);
+    }
+}

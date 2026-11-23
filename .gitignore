@@ -27,3 +27,14 @@ App_Data/
 src/Apps/Sinema/Sinema.Web/wwwroot/uploads/*
 !src/Apps/Sinema/Sinema.Web/wwwroot/uploads/.gitkeep
 docs/donanim/raw/
+
+# Claude Code devir notu (iç not, yayınlanmaz)
+CLAUDE.md
+
+# OnderCode Donanım kapalı kaynak: yalnız bu bilgisayarda durur, depoya gönderilmez
+src/Apps/Donanim/
+tests/Donanim.Tests/
+docs/donanim/
+donanim-*.bat
+donanim-*.txt
+OnderCode.Donanim.slnx
